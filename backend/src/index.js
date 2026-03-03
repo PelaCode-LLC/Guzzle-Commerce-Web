@@ -14,6 +14,13 @@ const messageRoutes = require('./routes/messages');
 
 const app = express();
 
+// initialize DB schema (idempotent)
+const initializeDatabase = require('./config/schema');
+initializeDatabase().catch(err => {
+  console.error('Failed to initialize database, exiting', err);
+  process.exit(1);
+});
+
 // Middleware
 app.use(helmet());
 app.use(morgan('dev'));

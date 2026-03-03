@@ -3,6 +3,7 @@ import * as log from '../util/log';
 import { storableError } from '../util/errors';
 import { clearCurrentUser, fetchCurrentUser } from './user.duck';
 import { createUserWithIdp } from '../util/api';
+import { registerUser, loginUser, fetchMe } from '../util/backend';
 
 const authenticated = authInfo => authInfo?.isAnonymous === false;
 const loggedInAs = authInfo => authInfo?.isLoggedInAs === true;
@@ -56,12 +57,13 @@ const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
 const loginThunk = createAsyncThunk(
   'auth/login',
   ({ username, password }, thunkAPI) => {
-    const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const { rejectWithValue, dispatch } = thunkAPI;
 
-    return sdk
-      .login({ username, password })
-      .then(() => {
-        return dispatch(fetchCurrentUser({ afterLogin: true }));
+    return loginUser({ email: username, password })
+      .then(data => {
+        // store token in localStorage for subsequent requests
+        localStorage.setItem('jwt', data.token);
+        return dispatch(fetchCurrentUser({ afterLogin: true, token: data.token }));
       })
       .then(() => ({ username, password }))
       .catch(e => rejectWithValue(storableError(e)));
@@ -103,13 +105,14 @@ const logoutThunk = createAsyncThunk(
 const signupThunk = createAsyncThunk(
   'auth/signup',
   (params, thunkAPI) => {
-    const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const { rejectWithValue, dispatch } = thunkAPI;
 
-    return sdk.currentUser
-      .create(params)
-      .then(() =>
-        dispatch(loginThunk({ username: params.email, password: params.password })).unwrap()
-      )
+    return registerUser(params)
+      .then(data => {
+        // store token
+        localStorage.setItem('jwt', data.token);
+        return dispatch(fetchCurrentUser({ afterLogin: true, token: data.token }));
+      })
       .then(() => params)
       .catch(e => {
         log.error(e, 'signup-failed', {
@@ -130,11 +133,18 @@ const signupThunk = createAsyncThunk(
   }
 );
 
+// IDP flow still uses local backend helper to create user; backend can then return token
 const signupWithIdpThunk = createAsyncThunk(
   'auth/signupWithIdp',
   (params, thunkAPI) => {
     const { rejectWithValue, dispatch } = thunkAPI;
     return createUserWithIdp(params)
+      .then(data => {
+        // backend should return token similar to register/login
+        if (data.token) {
+          localStorage.setItem('jwt', data.token);
+        }
+      })
       .then(() => dispatch(fetchCurrentUser({ afterLogin: true })))
       .then(() => params)
       .catch(e => {
@@ -258,6 +268,8 @@ export const login = (username, password) => dispatch => {
 };
 
 export const logout = () => dispatch => {
+  // clear stored token
+  localStorage.removeItem('jwt');
   return dispatch(logoutThunk()).unwrap();
 };
 
