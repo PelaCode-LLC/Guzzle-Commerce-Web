@@ -1,6 +1,11 @@
 {
   "AddressLinkMaybe.viewOnGoogleMaps": "Ver en Google Maps",
   "FooterContainer.slogan": "Built by motorsports enthusiasts, for motorsports enthusiasts",
+  "LandingPage.localHome.browse": "Explorar",
+  "LandingPage.localHome.errorDescription": "Actualiza la página. Si el problema continúa, contacta al soporte.",
+  "LandingPage.localHome.errorTitle": "¡Ups! Algo salió mal.",
+  "LandingPage.localHome.subtitle": "Encuentra piezas y equipo por categoría.",
+  "LandingPage.localHome.title": "Compra por categoría",
   "AuthenticationPage.confirmSignupInfoText": "Por favor, verifica que tu información sea correcta",
   "AuthenticationPage.confirmSignupWithIdpTitle": "Regístrate con {idp}",
   "AuthenticationPage.fixEmail": "¿Usaste un correo equivocado? {fixEmailLink}.",
