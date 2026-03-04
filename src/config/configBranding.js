@@ -1,6 +1,6 @@
 import logoImageDesktop from '../assets/Guzzle Logo.png';
 import logoImageMobile from '../assets/Guzzle Logo.png';
-import brandImage from '../assets/Guzzle Logo.png';
+import brandImage from '../assets/biketribe-brandImage-1500.jpg';
 import facebookImage from '../assets/biketribe-facebook-sharing-1200x630.jpg';
 import twitterImage from '../assets/biketribe-twitter-sharing-600x314.jpg';
 
@@ -34,7 +34,7 @@ export const logoImageMobileURL = logoImageMobile;
 // Note: logo image is always scaled and the limiting factor is height. However, there's also maximum width,
 //       which is 370px in the Topbar. If the logo is wider than that, browser will scale it down.
 export const logoSettings = {
-  height: 56, // Customized local app supports: 24, 36, 48, 56
+  height: 48, // Customized local app supports: 24, 36, 48, 56
   format: 'image',
 };
 

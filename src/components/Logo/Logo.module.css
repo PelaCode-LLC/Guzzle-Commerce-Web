@@ -3,8 +3,8 @@
 .root {
   display: flex;
   align-items: center;
-  height: 72px;
-  max-width: 520px;
+  height: 64px;
+  max-width: 420px;
   margin: 0;
 
   @media (--viewportMedium) {
@@ -18,12 +18,12 @@
   height: auto;
   width: auto;
   /* Mobile topbar has maximum of 100vw - 132px space for logo */
-  max-width: min(calc(100vw - 132px), 100%, 520px);
+  max-width: min(calc(100vw - 132px), 100%, 420px);
   object-fit: contain;
   object-position: center;
 
   @media (--viewportLarge) {
-    max-width: min(100%, 520px);
+    max-width: min(100%, 420px);
   }
 }
 
