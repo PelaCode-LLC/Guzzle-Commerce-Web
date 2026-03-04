@@ -1,11 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 import { types as sdkTypes, createImageVariantConfig } from '../../util/sdkLoader';
+import appSettings from '../../config/settings';
 import { storableError } from '../../util/errors';
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
 import { transactionLineItems } from '../../util/api';
 import * as log from '../../util/log';
 import { denormalisedResponseEntities } from '../../util/data';
+import {
+  fetchListingByIdBackend,
+  toBackendIdFromUuid,
+  toSdkSingleListingResponse,
+  toUuidFromBackendId,
+} from '../../util/backend';
 import {
   bookingTimeUnits,
   findNextBoundary,
@@ -97,6 +104,17 @@ const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAP
 
   const show = isOwn ? sdk.ownListings.show(params) : sdk.listings.show(params);
 
+  if (!appSettings.useSharetribeConsole || !sdk || !sdk.listings) {
+    const backendId = toBackendIdFromUuid(listingId?.uuid || listingId);
+    return fetchListingByIdBackend(backendId)
+      .then(data => {
+        const response = toSdkSingleListingResponse(data);
+        dispatch(addMarketplaceEntities(response, {}));
+        return response;
+      })
+      .catch(e => rejectWithValue(storableError(e)));
+  }
+
   return show
     .then(data => {
       const listingFields = config?.listing?.listingFields;
@@ -124,6 +142,10 @@ export const showListing = (listingId, config, isOwn = false) => (dispatch, getS
 export const fetchReviewsThunk = createAsyncThunk(
   'ListingPage/fetchReviews',
   ({ listingId }, { rejectWithValue, extra: sdk }) => {
+    if (!appSettings.useSharetribeConsole || !sdk || !sdk.reviews) {
+      return Promise.resolve([]);
+    }
+
     return sdk.reviews
       .query({
         listing_id: listingId,
@@ -525,7 +547,11 @@ export default listingPageSlice.reducer;
 // ================ Load data ================ //
 
 export const loadData = (params, search, config) => (dispatch, getState, sdk) => {
-  const listingId = new UUID(params.id);
+  const normalizedId =
+    !appSettings.useSharetribeConsole && !String(params.id || '').includes('-')
+      ? toUuidFromBackendId(params.id)
+      : params.id;
+  const listingId = new UUID(normalizedId);
   const state = getState();
   const currentUser = state.user?.currentUser;
   const inquiryModalOpenForListingId =
