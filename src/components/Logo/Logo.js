@@ -3,6 +3,11 @@ import classNames from 'classnames';
 
 import { useConfiguration } from '../../context/configurationContext';
 import { ResponsiveImage } from '../../components/';
+import {
+  logoImageDesktopURL as localLogoImageDesktop,
+  logoImageMobileURL as localLogoImageMobile,
+  logoSettings as localLogoSettings,
+} from '../../config/configBranding';
 
 import css from './Logo.module.css';
 
@@ -125,14 +130,17 @@ const Logo = props => {
   const { layout = 'desktop', ...rest } = props;
   // NOTE: logo images are set in hosted branding.json asset or src/config/brandingConfig.js
   const { logoImageDesktop, logoImageMobile, logoSettings } = config.branding;
+  const resolvedLogoDesktop = localLogoImageDesktop || logoImageDesktop;
+  const resolvedLogoMobile = localLogoImageMobile || logoImageMobile;
+  const resolvedLogoSettings = localLogoSettings || logoSettings;
 
   return (
     <LogoComponent
       {...rest}
       layout={layout}
-      logoImageDesktop={logoImageDesktop}
-      logoImageMobile={logoImageMobile}
-      logoSettings={logoSettings}
+      logoImageDesktop={resolvedLogoDesktop}
+      logoImageMobile={resolvedLogoMobile}
+      logoSettings={resolvedLogoSettings}
       marketplaceName={config.marketplaceName}
     />
   );
