@@ -31,7 +31,6 @@ const ConfirmSignupFormComponent = props => (
         formId,
         handleSubmit,
         inProgress,
-        invalid,
         intl,
         termsAndConditions,
         authInfo,
@@ -67,7 +66,7 @@ const ConfirmSignupFormComponent = props => (
 
       const classes = classNames(rootClassName || css.root, className);
       const submitInProgress = inProgress;
-      const submitDisabled = invalid || submitInProgress;
+      const submitDisabled = submitInProgress;
 
       // If authInfo is not available we should not show the ConfirmForm
       if (!authInfo) {

@@ -42,7 +42,6 @@ const SignupFormComponent = props => (
         formId,
         handleSubmit,
         inProgress,
-        invalid,
         intl,
         termsAndConditions,
         preselectedUserType,
@@ -111,7 +110,7 @@ const SignupFormComponent = props => (
 
       const classes = classNames(rootClassName || css.root, className);
       const submitInProgress = inProgress;
-      const submitDisabled = invalid || submitInProgress || isPasswordUsedMoreThanOnce(values);
+      const submitDisabled = submitInProgress || isPasswordUsedMoreThanOnce(values);
 
       return (
         <Form className={classes} onSubmit={handleSubmit}>
