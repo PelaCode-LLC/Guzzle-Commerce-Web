@@ -34,7 +34,7 @@ export const logoImageMobileURL = logoImageMobile;
 // Note: logo image is always scaled and the limiting factor is height. However, there's also maximum width,
 //       which is 370px in the Topbar. If the logo is wider than that, browser will scale it down.
 export const logoSettings = {
-  height: 48, // Hosted asset supports: 24, 36, 48
+  height: 56, // Customized local app supports: 24, 36, 48, 56
   format: 'image',
 };
 
