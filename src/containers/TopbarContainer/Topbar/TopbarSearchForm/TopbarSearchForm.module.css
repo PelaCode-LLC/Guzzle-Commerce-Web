@@ -15,7 +15,7 @@
   display: flex;
   width: 24px;
   align-self: stretch;
-  background-color: var(--colorGrey100);
+  background-color: var(--colorWhite);
 
   @media (--viewportMedium) {
     margin-left: 0;
@@ -49,7 +49,7 @@
   /* Borders */
   border: 0;
   border-radius: 0;
-  background-color: var(--colorGrey100);
+  background-color: var(--colorWhite);
   color: var(--colorGrey900);
 
   /* Safari bugfix: without this Safari will print placeholder to a wrong place */
@@ -74,7 +74,7 @@
   display: flex;
   width: 24px;
   align-self: stretch;
-  background-color: var(--colorGrey100);
+  background-color: var(--colorWhite);
 }
 
 .desktopInput {
@@ -94,7 +94,7 @@
   margin-top: 0;
   margin-bottom: 0;
   margin-left: 10px;
-  background-color: var(--colorGrey100);
+  background-color: var(--colorWhite);
   color: var(--colorGrey900);
 
   &:hover,
@@ -206,6 +206,14 @@
   width: 24px;
   align-self: stretch;
   border-bottom: 2px solid var(--marketplaceColor);
+  background-color: var(--colorWhite);
+}
+
+:global(:root.theme-dark) .mobileIcon,
+:global(:root.theme-dark) .desktopIcon,
+:global(:root.theme-dark) .icon,
+:global(:root.theme-dark) .mobileInput,
+:global(:root.theme-dark) .desktopInput {
   background-color: var(--colorGrey100);
 }
 
