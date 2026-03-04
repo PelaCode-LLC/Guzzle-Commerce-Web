@@ -1,4 +1,5 @@
 import React from 'react';
+import { FormattedMessage } from '../../util/reactIntl';
 import { useConfiguration } from '../../context/configurationContext';
 import loadable from '@loadable/component';
 
@@ -27,7 +28,19 @@ const FooterComponent = () => {
     linkLogoToExternalSite: topbar?.logoLink,
   };
 
-  return <SectionBuilder sections={[footerSection]} />;
+  return (
+    <>
+      <SectionBuilder sections={[footerSection]} />
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '12px 24px 24px',
+        }}
+      >
+        <FormattedMessage id="FooterContainer.slogan" />
+      </div>
+    </>
+  );
 };
 
 // NOTE: if you want to add dynamic data to FooterComponent,

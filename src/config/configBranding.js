@@ -1,6 +1,6 @@
-import logoImageDesktop from '../assets/biketribe-logo-desktop.png';
-import logoImageMobile from '../assets/biketribe-logo-mobile.png';
-import brandImage from '../assets/biketribe-brandImage-1500.jpg';
+import logoImageDesktop from '../assets/Guzzle Logo.png';
+import logoImageMobile from '../assets/Guzzle Logo.png';
+import brandImage from '../assets/Guzzle Logo.png';
 import facebookImage from '../assets/biketribe-facebook-sharing-1200x630.jpg';
 import twitterImage from '../assets/biketribe-twitter-sharing-600x314.jpg';
 

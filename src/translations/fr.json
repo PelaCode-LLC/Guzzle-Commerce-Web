@@ -1,5 +1,6 @@
 {
   "AddressLinkMaybe.viewOnGoogleMaps": "Voir sur Google Maps",
+  "FooterContainer.slogan": "Built by motorsports enthusiasts, for motorsports enthusiasts",
   "AuthenticationPage.confirmSignupInfoText": "Veuillez vérifier que vos informations sont correctes.",
   "AuthenticationPage.confirmSignupWithIdpTitle": "S'inscrire avec {idp}",
   "AuthenticationPage.fixEmail": "Y a t-il une erreur dans votre email ? {fixEmailLink}.",
