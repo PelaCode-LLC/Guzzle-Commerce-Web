@@ -53,6 +53,18 @@ Or run both together (recommended for this custom backend setup):
 
 - `yarn run dev-custom`
 
+#### WSL note (Windows PostgreSQL)
+
+If you run frontend from WSL but your PostgreSQL and custom backend run on Windows,
+use a split setup:
+
+1. In Windows PowerShell (repo root), start backend:
+	- `npm.cmd run dev --prefix backend`
+2. In WSL (repo root), start frontend only:
+	- `yarn run dev-custom-wsl`
+
+This avoids WSL `localhost` DB auth/network mismatches for backend startup.
+
 If signup fails on localhost, the most common causes are:
 
 - backend is not running on port `5000`
