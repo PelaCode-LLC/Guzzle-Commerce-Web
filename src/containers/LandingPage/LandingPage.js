@@ -7,6 +7,7 @@ import { connect } from 'react-redux';
 
 import { camelize } from '../../util/string';
 import { propTypes } from '../../util/types';
+import appSettings from '../../config/settings';
 
 import FallbackPage from './FallbackPage';
 import { ASSET_NAME } from './LandingPage.duck';
@@ -17,10 +18,16 @@ const PageBuilder = loadable(() =>
 
 export const LandingPageComponent = props => {
   const { pageAssetsData, inProgress, error } = props;
+  const landingPageData = pageAssetsData?.[camelize(ASSET_NAME)]?.data;
+  const shouldShowFallback = !landingPageData && !inProgress && !appSettings.useSharetribeConsole;
+
+  if (shouldShowFallback) {
+    return <FallbackPage error={error} />;
+  }
 
   return (
     <PageBuilder
-      pageAssetsData={pageAssetsData?.[camelize(ASSET_NAME)]?.data}
+      pageAssetsData={landingPageData}
       inProgress={inProgress}
       error={error}
       fallbackPage={<FallbackPage error={error} />}
