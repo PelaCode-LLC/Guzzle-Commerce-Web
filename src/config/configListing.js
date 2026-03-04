@@ -280,6 +280,21 @@ export const listingFields = [
  */
 
 export const listingTypes = [
+  {
+    listingType: 'default',
+    label: 'Marketplace listing',
+    transactionType: {
+      process: 'default-purchase',
+      alias: 'default-purchase/release-1',
+      unitType: 'item',
+    },
+    stockType: 'multipleItems',
+    defaultListingFields: {
+      payoutDetails: true,
+      shipping: false,
+      pickup: false,
+    },
+  },
   // // Here are some examples of listingTypes
   // // TODO: SearchPage does not work well if both booking and product selling are used at the same time
   // {
