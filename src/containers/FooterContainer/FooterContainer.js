@@ -11,11 +11,21 @@ const SectionBuilder = loadable(
 );
 
 const FooterComponent = () => {
-  const { footer = {}, topbar } = useConfiguration();
+  const { footer = {}, topbar, marketplaceName } = useConfiguration();
 
-  // If footer asset is not set, let's not render Footer at all.
+  // If footer asset is not set, show a local fallback footer.
   if (Object.keys(footer).length === 0) {
-    return null;
+    return (
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '20px 24px 28px',
+        }}
+      >
+        <div style={{ marginBottom: '6px' }}>{marketplaceName}</div>
+        <FormattedMessage id="FooterContainer.slogan" />
+      </div>
+    );
   }
 
   // The footer asset does not specify sectionId or sectionType. However, the SectionBuilder
