@@ -47,7 +47,11 @@ If you are running this project against the custom backend in `backend/`:
 2. Ensure PostgreSQL is running and the `marketplace` database exists.
 3. Start backend: `npm run dev --prefix backend` (or run `npm run dev` inside `backend/`).
 4. Verify backend health at `http://localhost:5000/api/health`.
-5. Start frontend: `yarn run dev`.
+5. Start frontend: `yarn run dev-frontend`.
+
+Or run both together (recommended for this custom backend setup):
+
+- `yarn run dev-custom`
 
 If signup fails on localhost, the most common causes are:
 
