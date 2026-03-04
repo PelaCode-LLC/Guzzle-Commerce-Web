@@ -1133,6 +1133,8 @@
   "TabNav.screenreader.tabNavigation": "Tabnavigation",
   "Topbar.logoIcon": "Zur Homepage gehen",
   "Topbar.menuIcon": "Menü öffnen",
+  "Topbar.themeDark": "Dunkelmodus",
+  "Topbar.themeLight": "Hellmodus",
   "Topbar.mobileSearchHelp": "Finde das, wonach du suchst.",
   "Topbar.searchIcon": "Suche öffnen",
   "Topbar.skipToMainContent": "Zum Inhalt springen",

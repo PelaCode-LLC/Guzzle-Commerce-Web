@@ -16,6 +16,7 @@ import {
 
 import TopbarSearchForm from '../TopbarSearchForm/TopbarSearchForm';
 import CustomLinksMenu from './CustomLinksMenu/CustomLinksMenu';
+import { THEME_DARK, getCurrentTheme, toggleTheme } from '../../../../../util/theme';
 
 import css from './TopbarDesktop.module.css';
 
@@ -154,9 +155,18 @@ const TopbarDesktop = props => {
     inboxTab,
   } = props;
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState(THEME_DARK);
 
   useEffect(() => {
     setMounted(true);
+    setTheme(getCurrentTheme());
+
+    const onThemeChanged = event => {
+      setTheme(event?.detail?.theme || getCurrentTheme());
+    };
+
+    window.addEventListener('theme-changed', onThemeChanged);
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
 
   const marketplaceName = config.marketplaceName;
@@ -182,6 +192,10 @@ const TopbarDesktop = props => {
 
   const signupLinkMaybe = isAuthenticatedOrJustHydrated ? null : <SignupLink />;
   const loginLinkMaybe = isAuthenticatedOrJustHydrated ? null : <LoginLink />;
+  const themeToggleLabel =
+    theme === THEME_DARK
+      ? intl.formatMessage({ id: 'Topbar.themeLight' })
+      : intl.formatMessage({ id: 'Topbar.themeDark' });
 
   const searchFormMaybe = showSearchForm ? (
     <TopbarSearchForm
@@ -220,6 +234,10 @@ const TopbarDesktop = props => {
         hasClientSideContentReady={authenticatedOnClientSide || !isAuthenticatedOrJustHydrated}
         showCreateListingsLink={showCreateListingsLink}
       />
+
+      <InlineTextButton rootClassName={css.themeToggle} onClick={() => setTheme(toggleTheme())}>
+        <span className={css.topbarLinkLabel}>{themeToggleLabel}</span>
+      </InlineTextButton>
 
       {inboxLinkMaybe}
       {profileMenuMaybe}

@@ -202,6 +202,26 @@
   --carouselWidth: 100vw;
 }
 
+:root.theme-dark {
+  --colorWhite: hsl(240 6% 12%);
+  --colorGrey50: hsl(240 6% 8%);
+  --colorGrey100: hsl(240 6% 12%);
+  --colorGrey200: hsl(240 6% 18%);
+  --colorGrey300: hsl(240 6% 26%);
+  --colorGrey400: hsl(240 6% 36%);
+  --colorGrey500: hsl(240 6% 50%);
+  --colorGrey600: hsl(240 6% 64%);
+  --colorGrey700: hsl(240 6% 78%);
+  --colorGrey800: hsl(240 6% 88%);
+  --colorGrey900: hsl(240 6% 96%);
+  --colorBlack: hsl(0 0% 100%);
+
+  --colorLightTransparent: rgba(0, 0, 0, 0.45);
+  --boxShadow: 0 2px 8px 0 rgba(0, 0, 0, 0.45);
+  --boxShadowLight: 0 2px 8px 0 rgba(0, 0, 0, 0.35);
+  --boxShadowPopup: 0 8px 16px 0 rgba(0, 0, 0, 0.6);
+}
+
 /* ================ Global element styles ================ */
 /**
  * Here are the global styles: for elements as well as some

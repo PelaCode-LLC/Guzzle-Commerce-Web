@@ -1133,6 +1133,8 @@
   "TabNav.screenreader.tabNavigation": "Navegación de pestaña",
   "Topbar.logoIcon": "Ir a la página de inicio",
   "Topbar.menuIcon": "Abrir menú",
+  "Topbar.themeDark": "Modo oscuro",
+  "Topbar.themeLight": "Modo claro",
   "Topbar.mobileSearchHelp": "Encuentra tu anuncio perfecto.",
   "Topbar.searchIcon": "Abrir búsqueda",
   "Topbar.skipToMainContent": "Saltar al contenido",

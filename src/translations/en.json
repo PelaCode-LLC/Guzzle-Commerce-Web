@@ -1134,6 +1134,8 @@
   "TabNav.screenreader.tabNavigation": "Tab navigation",
   "Topbar.logoIcon": "Go to homepage",
   "Topbar.menuIcon": "Open menu",
+  "Topbar.themeDark": "Dark mode",
+  "Topbar.themeLight": "Light mode",
   "Topbar.mobileSearchHelp": "Find what you are looking for.",
   "Topbar.searchIcon": "Open search",
   "Topbar.skipToMainContent": "Skip to content",

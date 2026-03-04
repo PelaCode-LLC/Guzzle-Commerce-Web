@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 
 import appSettings from '../../../config/settings';
@@ -13,6 +13,7 @@ import { createResourceLocatorString, matchPathname, pathByRouteName } from '../
 import {
   Button,
   IconArrowHead,
+  InlineTextButton,
   LimitedAccessBanner,
   LinkedLogo,
   Modal,
@@ -25,6 +26,7 @@ import SearchIcon from './SearchIcon';
 import TopbarSearchForm from './TopbarSearchForm/TopbarSearchForm';
 import TopbarMobileMenu from './TopbarMobileMenu/TopbarMobileMenu';
 import TopbarDesktop from './TopbarDesktop/TopbarDesktop';
+import { THEME_DARK, getCurrentTheme, toggleTheme } from '../../../util/theme';
 
 import css from './Topbar.module.css';
 import { getCurrentUserTypeRoles, showCreateListingLinkForUser } from '../../../util/userHelpers';
@@ -157,6 +159,18 @@ const TopbarComponent = props => {
     config,
     routeConfiguration,
   } = props;
+  const [theme, setTheme] = useState(THEME_DARK);
+
+  useEffect(() => {
+    setTheme(getCurrentTheme());
+
+    const onThemeChanged = event => {
+      setTheme(event?.detail?.theme || getCurrentTheme());
+    };
+
+    window.addEventListener('theme-changed', onThemeChanged);
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
 
   const handleSubmit = values => {
     const { currentSearchParams, history, location, config, routeConfiguration } = props;
@@ -209,6 +223,11 @@ const TopbarComponent = props => {
   };
 
   const showCreateListingsLink = showCreateListingLinkForUser(config, currentUser);
+    const themeToggleLabel =
+      theme === THEME_DARK
+        ? intl.formatMessage({ id: 'Topbar.themeLight' })
+        : intl.formatMessage({ id: 'Topbar.themeDark' });
+
   const { customer: isCustomer, provider: isProvider } = getCurrentUserTypeRoles(
     config,
     currentUser
@@ -364,6 +383,9 @@ const TopbarComponent = props => {
           alt={intl.formatMessage({ id: 'Topbar.logoIcon' })}
           linkToExternalSite={config?.topbar?.logoLink}
         />
+        <InlineTextButton rootClassName={css.themeToggle} onClick={() => setTheme(toggleTheme())}>
+          <span className={css.themeToggleLabel}>{themeToggleLabel}</span>
+        </InlineTextButton>
         {mobileSearchButtonMaybe}
       </nav>
       <div className={css.desktop}>

@@ -1133,6 +1133,8 @@
   "TabNav.screenreader.tabNavigation": "Aller à l'onglet",
   "Topbar.logoIcon": "Aller à la page d'accueil",
   "Topbar.menuIcon": "Ouvrir le menu",
+  "Topbar.themeDark": "Mode sombre",
+  "Topbar.themeLight": "Mode clair",
   "Topbar.mobileSearchHelp": "Trouvez ce que vous cherchez.",
   "Topbar.searchIcon": "Ouvrir la recherche",
   "Topbar.skipToMainContent": "Aller directement au contenu principal",
