@@ -16,7 +16,7 @@ import {
 
 import TopbarSearchForm from '../TopbarSearchForm/TopbarSearchForm';
 import CustomLinksMenu from './CustomLinksMenu/CustomLinksMenu';
-import { THEME_DARK, getCurrentTheme, toggleTheme } from '../../../../../util/theme';
+import { THEME_DARK, getCurrentTheme, toggleTheme } from '../../../../util/theme';
 
 import css from './TopbarDesktop.module.css';
 
