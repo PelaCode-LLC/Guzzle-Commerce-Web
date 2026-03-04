@@ -12,12 +12,13 @@ const PageBuilder = loadable(() =>
 
 const CATEGORY_PARAM_NAME = 'pub_categoryLevel1';
 const fallbackCategories = [
-  { id: 'engines', name: 'Engines' },
-  { id: 'suspension', name: 'Suspension' },
-  { id: 'wheels-tires', name: 'Wheels & Tires' },
-  { id: 'safety-gear', name: 'Safety Gear' },
+  { id: 'cars & trucks', name: 'Cars & Trucks' },
+  { id: 'motorcycles', name: 'Motorcycles' },
+  { id: 'watercraft', name: 'Watercraft' },
+  { id: 'parts', name: 'Parts' },
   { id: 'electronics', name: 'Electronics' },
   { id: 'tools', name: 'Tools' },
+  { id: 'services', name: 'Services' },
 ];
 
 // Create fallback content (array of sections) in page asset format:
