@@ -39,6 +39,22 @@ developing on Windows. These templates are made for Unix-like web services which
 environment type on host-services for web apps. Also, the Developer Docs use Unix-like commands in
 articles instead of DOS commands.
 
+### Local backend mode (custom API)
+
+If you are running this project against the custom backend in `backend/`:
+
+1. Create and configure `backend/.env` with working PostgreSQL credentials.
+2. Ensure PostgreSQL is running and the `marketplace` database exists.
+3. Start backend: `npm run dev --prefix backend` (or run `npm run dev` inside `backend/`).
+4. Verify backend health at `http://localhost:5000/api/health`.
+5. Start frontend: `yarn run dev`.
+
+If signup fails on localhost, the most common causes are:
+
+- backend is not running on port `5000`
+- invalid `DB_USER` / `DB_PASSWORD` in `backend/.env`
+- missing `marketplace` database
+
 ## Getting started with your own customization
 
 If you want to build your own Sharetribe marketplace by customizing the template application, see
