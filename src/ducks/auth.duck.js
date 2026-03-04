@@ -43,6 +43,9 @@ const initialState = {
 
 const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
   const { extra: sdk } = thunkAPI;
+  if (!sdk || typeof sdk.authInfo !== 'function') {
+    return Promise.resolve(null);
+  }
   return sdk.authInfo().catch(e => {
     // Requesting auth info just reads the token from the token
     // store (i.e. cookies), and should not fail in normal

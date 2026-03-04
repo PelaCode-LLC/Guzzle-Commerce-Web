@@ -59,14 +59,17 @@ const TRUST_PROXY = process.env.SERVER_SHARETRIBE_TRUST_PROXY || null;
 const CSP = process.env.REACT_APP_CSP;
 const cspReportUrl = '/csp-report';
 const cspEnabled = CSP === 'block' || CSP === 'report';
+const USE_SHARETRIBE_CONSOLE = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
 
 // Without these, something will break for sure
-const MANDATORY_ENV_VARIABLES = [
-  'REACT_APP_SHARETRIBE_SDK_CLIENT_ID',
-  'SHARETRIBE_SDK_CLIENT_SECRET',
-  'REACT_APP_MARKETPLACE_NAME',
-  'REACT_APP_MARKETPLACE_ROOT_URL',
-];
+const MANDATORY_ENV_VARIABLES = USE_SHARETRIBE_CONSOLE
+  ? [
+      'REACT_APP_SHARETRIBE_SDK_CLIENT_ID',
+      'SHARETRIBE_SDK_CLIENT_SECRET',
+      'REACT_APP_MARKETPLACE_NAME',
+      'REACT_APP_MARKETPLACE_ROOT_URL',
+    ]
+  : ['REACT_APP_MARKETPLACE_NAME', 'REACT_APP_MARKETPLACE_ROOT_URL'];
 const isEmpty = value => value == null || (value.hasOwnProperty('length') && value.length === 0);
 const checkEnvVariables = variables => {
   const missingEnvVariables = variables.filter(v => isEmpty(process.env?.[v]));

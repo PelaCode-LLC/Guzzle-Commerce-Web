@@ -12,6 +12,7 @@ const appSettings = {
   env: process.env.REACT_APP_ENV,
   dev: process.env.REACT_APP_ENV === 'development',
   verbose: false,
+  useSharetribeConsole: process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true',
 
   sdk: {
     clientId: process.env.REACT_APP_SHARETRIBE_SDK_CLIENT_ID,

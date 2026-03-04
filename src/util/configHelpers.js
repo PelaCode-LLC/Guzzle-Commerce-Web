@@ -1544,6 +1544,11 @@ const mergeMapConfig = (hostedMapConfig, defaultMapConfig) => {
 
 // Check if all the mandatory info have been retrieved from hosted assets
 const hasMandatoryConfigs = hostedConfig => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+  if (!useSharetribeConsole) {
+    return true;
+  }
+
   const { branding, listingTypes, listingFields, transactionSize } = hostedConfig;
   printErrorIfHostedAssetIsMissing({ branding, listingTypes, listingFields, transactionSize });
   return (

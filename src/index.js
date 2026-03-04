@@ -55,11 +55,15 @@ const render = (store, shouldHydrate) => {
 
   info
     .then(() => {
+      const hostedAssetsPromise = appSettings.useSharetribeConsole
+        ? store.dispatch(fetchAppAssets(defaultConfig.appCdnAssets, cdnAssetsVersion))
+        : Promise.resolve({});
+
       // Ensure that Loadable Components is ready
       // and fetch hosted assets in parallel before initializing the ClientApp
       return Promise.all([
         loadableReady(),
-        store.dispatch(fetchAppAssets(defaultConfig.appCdnAssets, cdnAssetsVersion)),
+        hostedAssetsPromise,
         store.dispatch(fetchCurrentUser()),
       ]);
     })
@@ -131,14 +135,16 @@ if (typeof window !== 'undefined') {
   // eslint-disable-next-line no-underscore-dangle
   const preloadedState = window.__PRELOADED_STATE__ || '{}';
   const initialState = JSON.parse(preloadedState, sdkTypes.reviver);
-  const sdk = createInstance({
-    transitVerbose: appSettings.sdk.transitVerbose,
-    clientId: appSettings.sdk.clientId,
-    secure: appSettings.usingSSL,
-    typeHandlers: apiUtils.typeHandlers,
-    ...baseUrl,
-    ...assetCdnBaseUrl,
-  });
+  const sdk = appSettings.useSharetribeConsole
+    ? createInstance({
+        transitVerbose: appSettings.sdk.transitVerbose,
+        clientId: appSettings.sdk.clientId,
+        secure: appSettings.usingSSL,
+        typeHandlers: apiUtils.typeHandlers,
+        ...baseUrl,
+        ...assetCdnBaseUrl,
+      })
+    : null;
 
   // Note: on localhost:3000, you need to use environment variable.
   const googleAnalyticsIdFromSSR = initialState?.hostedAssets?.googleAnalyticsId;
