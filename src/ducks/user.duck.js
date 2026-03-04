@@ -14,7 +14,7 @@ import { authInfo } from './auth.duck';
 import { updateStripeConnectAccount } from './stripeConnectAccount.duck';
 
 // new backend helper
-import { fetchMe } from '../util/backend';
+import { fetchMe, toSdkCurrentUser } from '../util/backend';
 
 // ================ Helper Functions ================ //
 
@@ -186,14 +186,19 @@ const fetchCurrentUserPayloadCreator = (options = {}, thunkAPI) => {
   if (token || localStorage.getItem('jwt')) {
     const authToken = token || localStorage.getItem('jwt');
     return fetchMe(authToken)
-      .then(currentUser => {
+      .then(user => {
+        const currentUser = toSdkCurrentUser(user);
         // no extra processing for listings/notifications yet
-        log.setUserId(currentUser.id);
-        dispatch(authInfo());
+        log.setUserId(currentUser.id?.uuid || currentUser.id);
+        if (sdk && typeof sdk.authInfo === 'function') {
+          dispatch(authInfo());
+        }
         return currentUser;
       })
       .catch(e => {
-        dispatch(authInfo());
+        if (sdk && typeof sdk.authInfo === 'function') {
+          dispatch(authInfo());
+        }
         log.error(e, 'fetch-current-user-backend-failed');
         return rejectWithValue(storableError(e));
       });

@@ -105,6 +105,41 @@ const abbreviateName = name => {
     .slice(0, 2);
 };
 
+export const toSdkCurrentUser = user => {
+  const firstName = user?.firstName || '';
+  const lastName = user?.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+  const displayName = fullName || user?.email || 'User';
+
+  return {
+    id: new UUID(toUuidFromBackendId(user?.id || 1)),
+    type: 'currentUser',
+    attributes: {
+      email: user?.email || '',
+      emailVerified: true,
+      state: 'active',
+      profile: {
+        firstName,
+        lastName,
+        displayName,
+        abbreviatedName: abbreviateName(displayName),
+        publicData: {},
+        protectedData: {},
+        privateData: {},
+      },
+    },
+    effectivePermissionSet: {
+      id: new UUID('00000000-0000-0000-0000-000000000001'),
+      type: 'permissionSet',
+      attributes: {
+        postListings: 'permission/allow',
+        initiateTransactions: 'permission/allow',
+        read: 'permission/allow',
+      },
+    },
+  };
+};
+
 const toSdkListing = listing => {
   const listingUuid = new UUID(toUuidFromBackendId(listing.id));
   const authorUuid = new UUID(toUuidFromBackendId(listing.userId || 1));
