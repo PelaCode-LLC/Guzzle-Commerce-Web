@@ -4,7 +4,7 @@
   "LandingPage.localHome.browse": "Browse",
   "LandingPage.localHome.errorDescription": "Please refresh the page. If this keeps happening, contact marketplace support.",
   "LandingPage.localHome.errorTitle": "Oops, something went wrong!",
-  "LandingPage.localHome.subtitle": "Find whatever you need by category.",
+  "LandingPage.localHome.subtitle": "Find what you need by category.",
   "LandingPage.localHome.title": "Shop by Category",
   "AuthenticationPage.confirmSignupInfoText": "Please check that your information is correct.",
   "AuthenticationPage.confirmSignupWithIdpTitle": "Sign up with {idp}",
