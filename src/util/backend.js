@@ -59,6 +59,18 @@ export const createListingBackend = async (token, data) => {
   return handleResponse(res);
 };
 
+export const updateListingBackend = async (token, listingId, data) => {
+  const res = await fetch(`${base}/api/listings/${listingId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+};
+
 // Listing/search helpers
 export const searchListingsBackend = async params => {
   const query = new URLSearchParams();

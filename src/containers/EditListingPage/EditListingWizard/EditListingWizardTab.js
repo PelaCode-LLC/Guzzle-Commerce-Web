@@ -157,12 +157,17 @@ const EditListingWizardTab = props => {
         // In Availability tab, the submitted data (plan) is inside a modal
         // We don't redirect provider immediately after plan is set
         if (isNewListingFlow && tab !== AVAILABILITY) {
-          const listingId = r.data.data.id;
+          const listingId = r?.data?.data?.id || r?.data?.id;
+          if (!listingId) {
+            throw new Error('Missing listing id from listing save response');
+          }
           automaticRedirectsForNewListingFlow(tab, listingId);
         }
       })
       .catch(e => {
-        // No need for extra actions
+        // eslint-disable-next-line no-console
+        console.error(e);
+        throw e;
       });
   };
 

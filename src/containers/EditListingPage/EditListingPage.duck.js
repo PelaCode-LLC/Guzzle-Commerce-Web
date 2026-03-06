@@ -17,6 +17,12 @@ import * as log from '../../util/log';
 import { parse } from '../../util/urlHelpers';
 import { isUserAuthorized } from '../../util/userHelpers';
 import { isBookingProcessAlias } from '../../transactions/transaction';
+import {
+  createListingBackend,
+  updateListingBackend,
+  toBackendIdFromUuid,
+  toSdkSingleListingResponse,
+} from '../../util/backend';
 
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
 import {
@@ -166,6 +172,35 @@ export const createListingDraftThunk = createAsyncThunk(
   'EditListingPage/createListingDraft',
   ({ data, config }, { dispatch, rejectWithValue, extra: sdk }) => {
     const { stockUpdate, images, ...rest } = data;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+      const listingPayload = {
+        title: rest.title,
+        description: rest.description,
+        category: rest?.publicData?.category1 || null,
+        price:
+          typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
+        currency: rest?.price?.currency || config.currency || 'USD',
+        status: 'draft',
+      };
+
+      if (!token) {
+        return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+      }
+
+      return createListingBackend(token, listingPayload)
+        .then(createdListing => {
+          const response = toSdkSingleListingResponse(createdListing);
+          dispatch(addMarketplaceEntities(response));
+          return response;
+        })
+        .catch(e => {
+          log.error(e, 'create-listing-draft-failed', { listingData: data });
+          return rejectWithValue(storableError(e));
+        });
+    }
 
     // If images should be saved, create array out of the image UUIDs for the API call
     const imageProperty = typeof images !== 'undefined' ? { images: imageIds(images) } : {};
@@ -210,6 +245,40 @@ export const updateListingThunk = createAsyncThunk(
   'EditListingPage/updateListing',
   ({ tab, data, config }, { dispatch, getState, rejectWithValue, extra: sdk }) => {
     const { id, stockUpdate, images, ...rest } = data;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+      const backendListingId = toBackendIdFromUuid(id?.uuid || id);
+      const listingPayload = {
+        title: rest.title,
+        description: rest.description,
+        category: rest?.publicData?.category1,
+        price:
+          typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : undefined,
+        currency: rest?.price?.currency,
+        status: rest.state,
+      };
+
+      const cleanedPayload = Object.fromEntries(
+        Object.entries(listingPayload).filter(([, value]) => typeof value !== 'undefined')
+      );
+
+      if (!token) {
+        return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+      }
+
+      return updateListingBackend(token, backendListingId, cleanedPayload)
+        .then(updatedListing => {
+          const response = toSdkSingleListingResponse(updatedListing);
+          dispatch(addMarketplaceEntities(response));
+          return { response, tab };
+        })
+        .catch(e => {
+          log.error(e, 'update-listing-failed', { listingData: data });
+          return rejectWithValue(storableError(e));
+        });
+    }
 
     // If images should be saved, create array out of the image UUIDs for the API call
     const imageProperty = typeof images !== 'undefined' ? { images: imageIds(images) } : {};
