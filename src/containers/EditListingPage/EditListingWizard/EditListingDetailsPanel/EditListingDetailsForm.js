@@ -388,11 +388,7 @@ const EditListingDetailsForm = props => (
       const submitInProgress = updateInProgress;
       const hasMandatoryListingTypeData = listingType && transactionProcessAlias && unitType;
       const submitDisabled =
-        invalid ||
-        disabled ||
-        submitInProgress ||
-        !hasMandatoryListingTypeData ||
-        !isCompatibleCurrency;
+        disabled || submitInProgress || !hasMandatoryListingTypeData || !isCompatibleCurrency;
 
       return (
         <Form className={classes} onSubmit={handleSubmit}>
