@@ -379,6 +379,18 @@ export const requestPublishListingDraft = listingId => (dispatch, getState, sdk)
 export const uploadImageThunk = createAsyncThunk(
   'EditListingPage/uploadImage',
   ({ actionPayload, listingImageConfig }, { rejectWithValue, extra: sdk }) => {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      return Promise.resolve({
+        data: {
+          id: actionPayload.id,
+          imageId: `local-image-${Date.now()}`,
+          file: actionPayload.file,
+        },
+      });
+    }
+
     const imageVariantInfo = getImageVariantInfo(listingImageConfig);
     const queryParams = {
       expand: true,

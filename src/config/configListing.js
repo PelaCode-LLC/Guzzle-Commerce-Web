@@ -290,7 +290,7 @@ export const listingTypes = [
     },
     stockType: 'multipleItems',
     defaultListingFields: {
-      payoutDetails: true,
+      payoutDetails: false,
       shipping: false,
       pickup: false,
     },
