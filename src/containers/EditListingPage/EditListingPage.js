@@ -315,6 +315,10 @@ export const EditListingPageComponent = props => {
       </Page>
     );
   } else {
+    const listingLoadError = page.showListingsError;
+    const listingLoadErrorMsg =
+      listingLoadError?.message || listingLoadError?.statusText || 'Failed to load listing data.';
+
     // If user has come to this page through a direct link to edit existing listing,
     // we need to load it first.
     const loadingPageMsg = {
@@ -327,6 +331,7 @@ export const EditListingPageComponent = props => {
           desktopClassName={css.desktopTopbar}
           mobileClassName={css.mobileTopbar}
         />
+        {listingLoadError ? <p className={css.error}>{listingLoadErrorMsg}</p> : null}
       </Page>
     );
   }

@@ -100,7 +100,13 @@ export const toUuidFromBackendId = value => {
 };
 
 export const toBackendIdFromUuid = uuid => {
-  const str = String(uuid || '');
+  const raw =
+    typeof uuid === 'string'
+      ? uuid
+      : uuid?.uuid ||
+        uuid?._uuid ||
+        (typeof uuid?.toString === 'function' ? uuid.toString() : String(uuid || ''));
+  const str = String(raw || '');
   const last = str.split('-').pop() || '1';
   const parsed = Number.parseInt(last, 16);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;

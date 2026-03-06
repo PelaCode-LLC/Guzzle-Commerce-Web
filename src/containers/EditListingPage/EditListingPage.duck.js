@@ -952,6 +952,7 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   dispatch(clearUpdatedTab());
   dispatch(clearPublishError());
   const { id, type } = params;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const fetchCurrentUserOptions = {
     updateNotifications: false,
   };
@@ -972,6 +973,19 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   }
 
   const payload = { id: new UUID(id) };
+  if (!useSharetribeConsole) {
+    return Promise.allSettled([
+      dispatch(requestShowListing(payload, config)),
+      dispatch(fetchCurrentUser(fetchCurrentUserOptions)),
+    ]).then(results => {
+      const listingResult = results[0];
+      if (listingResult.status === 'rejected') {
+        throw listingResult.reason;
+      }
+      return results;
+    });
+  }
+
   return Promise.all([
     dispatch(requestShowListing(payload, config)),
     dispatch(fetchCurrentUser(fetchCurrentUserOptions)),
