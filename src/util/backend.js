@@ -230,6 +230,30 @@ export const toSdkSearchResponse = (payload, page = 1, perPage = 24) => {
   };
 };
 
+export const toSdkOwnListingsQueryResponse = (payload, page = 1, perPage = 42) => {
+  const listings = Array.isArray(payload?.listings) ? payload.listings : [];
+  const mapped = listings.map(listing => {
+    const converted = toSdkOwnListingResponse(listing).data;
+    const ownListing = converted.data;
+    const author = converted.included[0];
+    return { ownListing, author };
+  });
+  const totalItems = Number(payload?.total || listings.length || 0);
+
+  return {
+    data: {
+      data: mapped.map(m => m.ownListing),
+      included: mapped.map(m => m.author),
+      meta: {
+        page,
+        perPage,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / perPage)),
+      },
+    },
+  };
+};
+
 export const toSdkSingleListingResponse = listing => {
   const mapped = toSdkListing(listing || {});
   return {

@@ -3,6 +3,7 @@ import { updatedEntities, denormalisedEntities } from '../../util/data';
 import { storableError } from '../../util/errors';
 import { createImageVariantConfig } from '../../util/sdkLoader';
 import { parse } from '../../util/urlHelpers';
+import { searchListingsBackend, toSdkOwnListingsQueryResponse } from '../../util/backend';
 
 import { fetchCurrentUser } from '../../ducks/user.duck';
 
@@ -35,8 +36,25 @@ export const getOwnListingsById = (state, listingIds) => {
 // Query Own Listings //
 ////////////////////////
 const queryOwnListingsPayloadCreator = (queryParams, { extra: sdk, dispatch, rejectWithValue }) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const { perPage, ...rest } = queryParams;
   const params = { ...rest, perPage };
+
+  if (!useSharetribeConsole) {
+    const page = Number(queryParams?.page || 1);
+    const limit = Number(perPage || RESULT_PAGE_SIZE);
+    const offset = Math.max(0, (page - 1) * limit);
+
+    return searchListingsBackend({ limit, offset })
+      .then(payload => {
+        const response = toSdkOwnListingsQueryResponse(payload, page, limit);
+        dispatch(addOwnEntities(response));
+        return response;
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
 
   return sdk.ownListings
     .query(params)
@@ -275,6 +293,7 @@ export default manageListingsPageSlice.reducer;
 // ================ Load data ================ //
 
 export const loadData = (params, search, config) => (dispatch, getState, sdk) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const queryParams = parse(search);
   const page = queryParams.page || 1;
   dispatch(clearOpenListingError());
@@ -286,23 +305,32 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   } = config.layout.listingImage;
   const aspectRatio = aspectHeight / aspectWidth;
 
-  return Promise.all([
-    dispatch(fetchCurrentUser()),
-    dispatch(
-      queryOwnListings({
-        ...queryParams,
-        page,
-        perPage: RESULT_PAGE_SIZE,
-        include: ['images', 'currentStock'],
-        'fields.image': [`variants.${variantPrefix}`, `variants.${variantPrefix}-2x`],
-        ...createImageVariantConfig(`${variantPrefix}`, 400, aspectRatio),
-        ...createImageVariantConfig(`${variantPrefix}-2x`, 800, aspectRatio),
-        'limit.images': 1,
-      })
-    ),
-  ])
+  const listingsQuery = queryOwnListings({
+    ...queryParams,
+    page,
+    perPage: RESULT_PAGE_SIZE,
+    include: ['images', 'currentStock'],
+    'fields.image': [`variants.${variantPrefix}`, `variants.${variantPrefix}-2x`],
+    ...createImageVariantConfig(`${variantPrefix}`, 400, aspectRatio),
+    ...createImageVariantConfig(`${variantPrefix}-2x`, 800, aspectRatio),
+    'limit.images': 1,
+  });
+
+  if (!useSharetribeConsole) {
+    return Promise.allSettled([dispatch(fetchCurrentUser()), dispatch(listingsQuery)]).then(
+      results => {
+        const listingsResult = results[1];
+        if (listingsResult.status === 'rejected') {
+          throw listingsResult.reason;
+        }
+        const ownListings = listingsResult.value?.data?.data;
+        return ownListings;
+      }
+    );
+  }
+
+  return Promise.all([dispatch(fetchCurrentUser()), dispatch(listingsQuery)])
     .then(response => {
-      // const currentUser = response[0]?.data?.data;
       const ownListings = response[1]?.data?.data;
       return ownListings;
     })
