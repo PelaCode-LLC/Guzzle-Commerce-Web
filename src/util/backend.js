@@ -240,8 +240,19 @@ export const toSdkSingleListingResponse = listing => {
   };
 };
 
-export const toSdkOwnListingResponse = listing => {
+const toListingStateFromBackendStatus = status => {
+  if (status === 'draft') {
+    return 'draft';
+  }
+  if (status === 'active') {
+    return 'published';
+  }
+  return status || 'published';
+};
+
+export const toSdkOwnListingResponse = (listing, forcedState) => {
   const mapped = toSdkListing(listing || {});
+  const ownListingState = forcedState || toListingStateFromBackendStatus(listing?.status);
   return {
     data: {
       data: {
@@ -249,7 +260,7 @@ export const toSdkOwnListingResponse = listing => {
         type: 'ownListing',
         attributes: {
           ...mapped.listing.attributes,
-          state: 'draft',
+          state: ownListingState,
         },
       },
       included: [mapped.author],

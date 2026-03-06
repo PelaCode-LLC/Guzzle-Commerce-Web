@@ -105,7 +105,7 @@ export const showListingThunk = createAsyncThunk(
       const backendListingId = toBackendIdFromUuid(actionPayload?.id?.uuid || actionPayload?.id);
       return fetchListingByIdBackend(backendListingId)
         .then(listing => {
-          const response = toSdkOwnListingResponse(listing);
+          const response = toSdkOwnListingResponse(listing, 'draft');
           dispatch(addMarketplaceEntities(response));
           return response;
         })
@@ -210,7 +210,7 @@ export const createListingDraftThunk = createAsyncThunk(
 
       return createListingBackend(token, cleanedPayload)
         .then(createdListing => {
-          const response = toSdkOwnListingResponse(createdListing);
+          const response = toSdkOwnListingResponse(createdListing, 'draft');
           dispatch(addMarketplaceEntities(response));
           return response;
         })
@@ -288,7 +288,7 @@ export const updateListingThunk = createAsyncThunk(
 
       return updateListingBackend(token, backendListingId, cleanedPayload)
         .then(updatedListing => {
-          const response = toSdkOwnListingResponse(updatedListing);
+          const response = toSdkOwnListingResponse(updatedListing, 'draft');
           dispatch(addMarketplaceEntities(response));
           return { response, tab };
         })
@@ -350,6 +350,27 @@ export const requestUpdateListing = (tab, data, config) => (dispatch, getState, 
 /////////////////////
 
 const publishListingPayloadCreator = ({ listingId }, { dispatch, rejectWithValue, extra: sdk }) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+  if (!useSharetribeConsole) {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+    const backendListingId = toBackendIdFromUuid(listingId?.uuid || listingId);
+
+    if (!token) {
+      return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+    }
+
+    return updateListingBackend(token, backendListingId, { status: 'active' })
+      .then(updatedListing => {
+        const response = toSdkOwnListingResponse(updatedListing);
+        dispatch(addMarketplaceEntities(response));
+        return response;
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
+
   return sdk.ownListings
     .publishDraft({ id: listingId }, { expand: true })
     .then(response => {
