@@ -234,3 +234,16 @@ export const toSdkSingleListingResponse = listing => {
   };
 };
 
+export const toSdkOwnListingResponse = listing => {
+  const mapped = toSdkListing(listing || {});
+  return {
+    data: {
+      data: {
+        ...mapped.listing,
+        type: 'ownListing',
+      },
+      included: [mapped.author],
+    },
+  };
+};
+

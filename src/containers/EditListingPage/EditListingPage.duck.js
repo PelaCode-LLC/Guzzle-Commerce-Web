@@ -19,9 +19,10 @@ import { isUserAuthorized } from '../../util/userHelpers';
 import { isBookingProcessAlias } from '../../transactions/transaction';
 import {
   createListingBackend,
+  fetchListingByIdBackend,
   updateListingBackend,
   toBackendIdFromUuid,
-  toSdkSingleListingResponse,
+  toSdkOwnListingResponse,
 } from '../../util/backend';
 
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
@@ -98,6 +99,21 @@ const sortExceptionsByStartTime = (a, b) => {
 export const showListingThunk = createAsyncThunk(
   'EditListingPage/showListing',
   ({ actionPayload, config }, { dispatch, rejectWithValue, extra: sdk }) => {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const backendListingId = toBackendIdFromUuid(actionPayload?.id?.uuid || actionPayload?.id);
+      return fetchListingByIdBackend(backendListingId)
+        .then(listing => {
+          const response = toSdkOwnListingResponse(listing);
+          dispatch(addMarketplaceEntities(response));
+          return response;
+        })
+        .catch(e => {
+          return rejectWithValue(storableError(e));
+        });
+    }
+
     const imageVariantInfo = getImageVariantInfo(config.layout.listingImage);
     const queryParams = {
       include: ['author', 'images', 'currentStock'],
@@ -194,7 +210,7 @@ export const createListingDraftThunk = createAsyncThunk(
 
       return createListingBackend(token, cleanedPayload)
         .then(createdListing => {
-          const response = toSdkSingleListingResponse(createdListing);
+          const response = toSdkOwnListingResponse(createdListing);
           dispatch(addMarketplaceEntities(response));
           return response;
         })
@@ -272,7 +288,7 @@ export const updateListingThunk = createAsyncThunk(
 
       return updateListingBackend(token, backendListingId, cleanedPayload)
         .then(updatedListing => {
-          const response = toSdkSingleListingResponse(updatedListing);
+          const response = toSdkOwnListingResponse(updatedListing);
           dispatch(addMarketplaceEntities(response));
           return { response, tab };
         })
