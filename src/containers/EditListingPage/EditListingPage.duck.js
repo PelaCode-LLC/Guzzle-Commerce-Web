@@ -179,18 +179,20 @@ export const createListingDraftThunk = createAsyncThunk(
       const listingPayload = {
         title: rest.title,
         description: rest.description,
-        category: rest?.publicData?.category1 || null,
+        category: rest?.publicData?.category1,
         price:
           typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
         currency: rest?.price?.currency || config.currency || 'USD',
-        status: 'draft',
       };
+      const cleanedPayload = Object.fromEntries(
+        Object.entries(listingPayload).filter(([, value]) => value !== null && value !== undefined)
+      );
 
       if (!token) {
         return rejectWithValue(storableError({ error: 'Missing authentication token' }));
       }
 
-      return createListingBackend(token, listingPayload)
+      return createListingBackend(token, cleanedPayload)
         .then(createdListing => {
           const response = toSdkSingleListingResponse(createdListing);
           dispatch(addMarketplaceEntities(response));

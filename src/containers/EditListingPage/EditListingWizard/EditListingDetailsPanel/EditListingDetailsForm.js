@@ -33,6 +33,14 @@ const TITLE_MAX_LENGTH = 60;
 const ErrorMessage = props => {
   const { fetchErrors } = props;
   const { updateListingError, createListingDraftError, showListingsError } = fetchErrors || {};
+  const errorDetails =
+    updateListingError?.message ||
+    updateListingError?.statusText ||
+    createListingDraftError?.message ||
+    createListingDraftError?.statusText ||
+    showListingsError?.message ||
+    showListingsError?.statusText ||
+    null;
   const errorMessage = updateListingError ? (
     <FormattedMessage id="EditListingDetailsForm.updateFailed" />
   ) : createListingDraftError ? (
@@ -42,7 +50,12 @@ const ErrorMessage = props => {
   ) : null;
 
   if (errorMessage) {
-    return <p className={css.error}>{errorMessage}</p>;
+    return (
+      <p className={css.error}>
+        {errorMessage}
+        {errorDetails ? ` ${errorDetails}` : ''}
+      </p>
+    );
   }
   return null;
 };
