@@ -247,6 +247,10 @@ export const toSdkOwnListingResponse = listing => {
       data: {
         ...mapped.listing,
         type: 'ownListing',
+        attributes: {
+          ...mapped.listing.attributes,
+          state: 'draft',
+        },
       },
       included: [mapped.author],
     },
