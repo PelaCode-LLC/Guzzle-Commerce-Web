@@ -10,6 +10,7 @@ import { denormalisedResponseEntities } from '../../util/data';
 import {
   fetchListingByIdBackend,
   toBackendIdFromUuid,
+  toSdkOwnListingResponse,
   toSdkSingleListingResponse,
   toUuidFromBackendId,
 } from '../../util/backend';
@@ -58,6 +59,7 @@ const removeOutdatedDateData = timeSlotsForDate => {
 //////////////////
 const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAPI) => {
   const { dispatch, rejectWithValue, extra: sdk } = thunkAPI;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const {
     aspectWidth = 1,
     aspectHeight = 1,
@@ -104,11 +106,11 @@ const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAP
 
   const show = isOwn ? sdk.ownListings.show(params) : sdk.listings.show(params);
 
-  if (!appSettings.useSharetribeConsole || !sdk || !sdk.listings) {
+  if (!useSharetribeConsole || !sdk || !sdk.listings) {
     const backendId = toBackendIdFromUuid(listingId?.uuid || listingId);
     return fetchListingByIdBackend(backendId)
       .then(data => {
-        const response = toSdkSingleListingResponse(data);
+        const response = isOwn ? toSdkOwnListingResponse(data) : toSdkSingleListingResponse(data);
         dispatch(addMarketplaceEntities(response, {}));
         return response;
       })
@@ -142,7 +144,8 @@ export const showListing = (listingId, config, isOwn = false) => (dispatch, getS
 export const fetchReviewsThunk = createAsyncThunk(
   'ListingPage/fetchReviews',
   ({ listingId }, { rejectWithValue, extra: sdk }) => {
-    if (!appSettings.useSharetribeConsole || !sdk || !sdk.reviews) {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+    if (!useSharetribeConsole || !sdk || !sdk.reviews) {
       return Promise.resolve([]);
     }
 
