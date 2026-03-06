@@ -166,7 +166,7 @@ export const EditListingPageComponent = props => {
   const isNewListingFlow = isNewURI || isDraftURI;
 
   const listingId = page.submittedListingId || (id ? new UUID(id) : null);
-  const currentListing = ensureOwnListing(getOwnListing(listingId));
+  const currentListing = ensureOwnListing(getOwnListing(listingId) || page.listingDraft);
   const { state: currentListingState } = currentListing.attributes;
 
   const hasPostingRights = hasPermissionToPostListings(currentUser);
@@ -178,7 +178,9 @@ export const EditListingPageComponent = props => {
   const shouldRedirectAfterPosting = isNewListingFlow && listingId && isPastDraft;
 
   const hasStripeOnboardingDataIfNeeded = returnURLType ? !!currentUser?.id : true;
-  const showWizard = hasStripeOnboardingDataIfNeeded && (isNewURI || currentListing.id);
+  const showWizard =
+    hasStripeOnboardingDataIfNeeded &&
+    (isNewURI || currentListing.id || page.submittedListingId || page.listingDraft?.id);
 
   if (!isUserAuthorized(currentUser)) {
     return (
