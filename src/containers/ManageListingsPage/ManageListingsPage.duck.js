@@ -3,7 +3,12 @@ import { updatedEntities, denormalisedEntities } from '../../util/data';
 import { storableError } from '../../util/errors';
 import { createImageVariantConfig } from '../../util/sdkLoader';
 import { parse } from '../../util/urlHelpers';
-import { searchListingsBackend, toSdkOwnListingsQueryResponse } from '../../util/backend';
+import {
+  searchListingsBackend,
+  toSdkOwnListingsQueryResponse,
+  toBackendIdFromUuid,
+  deleteListingBackend,
+} from '../../util/backend';
 
 import { fetchCurrentUser } from '../../ducks/user.duck';
 
@@ -153,6 +158,52 @@ export const discardDraft = listingId => (dispatch, getState, sdk) => {
   return dispatch(discardDraftThunk(listingId)).unwrap();
 };
 
+////////////////////
+// Delete Listing //
+////////////////////
+const deleteListingPayloadCreator = (listingId, thunkAPI) => {
+  const { getState, dispatch, rejectWithValue } = thunkAPI;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+  const { queryParams } = getState().ManageListingsPage;
+
+  if (useSharetribeConsole) {
+    return rejectWithValue(
+      storableError({ error: 'Deleting listings is not supported in Sharetribe Console mode.' })
+    );
+  }
+
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+  const backendListingId = toBackendIdFromUuid(listingId?.uuid || listingId);
+
+  if (!token) {
+    return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+  }
+
+  const page = Number(queryParams?.page || 1);
+  const limit = Number(queryParams?.perPage || RESULT_PAGE_SIZE);
+  const offset = Math.max(0, (page - 1) * limit);
+
+  return deleteListingBackend(token, backendListingId)
+    .then(() => searchListingsBackend({ limit, offset }))
+    .then(payload => {
+      const response = toSdkOwnListingsQueryResponse(payload, page, limit);
+      dispatch(addOwnEntities(response));
+      return response;
+    })
+    .catch(e => {
+      return rejectWithValue(storableError(e));
+    });
+};
+
+export const deleteListingThunk = createAsyncThunk(
+  'app/ManageListingsPage/deleteListing',
+  deleteListingPayloadCreator
+);
+
+export const deleteListing = listingId => (dispatch, getState, sdk) => {
+  return dispatch(deleteListingThunk(listingId)).unwrap();
+};
+
 // ================ Slice ================ //
 
 const resultIds = data => data.data.map(l => l.id);
@@ -185,6 +236,8 @@ const manageListingsPageSlice = createSlice({
     closingListingError: null,
     discardingDraft: null,
     discardingDraftError: null,
+    deletingListing: null,
+    deletingListingError: null,
   },
   reducers: {
     clearOpenListingError: state => {
@@ -283,6 +336,27 @@ const manageListingsPageSlice = createSlice({
           error: action.payload,
         };
         state.discardingDraft = null;
+      });
+
+    // Delete listing
+    builder
+      .addCase(deleteListingThunk.pending, (state, action) => {
+        state.deletingListing = action.meta.arg;
+        state.deletingListingError = null;
+      })
+      .addCase(deleteListingThunk.fulfilled, (state, action) => {
+        state.currentPageResultIds = resultIds(action.payload.data);
+        state.pagination = action.payload.data.meta;
+        state.deletingListing = null;
+      })
+      .addCase(deleteListingThunk.rejected, (state, action) => {
+        // eslint-disable-next-line no-console
+        console.error(action.payload || action.error);
+        state.deletingListingError = {
+          listingId: state.deletingListing,
+          error: action.payload,
+        };
+        state.deletingListing = null;
       });
   },
 });

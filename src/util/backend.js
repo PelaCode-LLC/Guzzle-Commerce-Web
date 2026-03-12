@@ -71,6 +71,16 @@ export const updateListingBackend = async (token, listingId, data) => {
   return handleResponse(res);
 };
 
+export const deleteListingBackend = async (token, listingId) => {
+  const res = await fetch(`${base}/api/listings/${listingId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse(res);
+};
+
 // Listing/search helpers
 export const searchListingsBackend = async params => {
   const query = new URLSearchParams();
