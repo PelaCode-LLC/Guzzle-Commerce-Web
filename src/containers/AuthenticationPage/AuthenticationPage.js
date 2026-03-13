@@ -208,6 +208,7 @@ export const AuthenticationForms = props => {
   const handleSubmitSignup = values => {
     const { userType, email, password, fname, lname, displayName, ...rest } = values;
     const displayNameMaybe = displayName ? { displayName: displayName.trim() } : {};
+    const userTypeMaybe = userType ? { userType } : {};
 
     const params = {
       email,
@@ -216,7 +217,7 @@ export const AuthenticationForms = props => {
       lastName: lname.trim(),
       ...displayNameMaybe,
       publicData: {
-        userType,
+        ...userTypeMaybe,
         ...pickUserFieldsData(rest, 'public', userType, userFields),
       },
       privateData: {
@@ -324,6 +325,7 @@ const ConfirmIdProviderInfoForm = props => {
       displayName,
       ...rest
     } = values;
+    const userTypeMaybe = userType ? { userType } : {};
 
     const displayNameMaybe = displayName ? { displayName: displayName.trim() } : {};
 
@@ -340,7 +342,7 @@ const ConfirmIdProviderInfoForm = props => {
     const extendedDataMaybe = !isEmpty(rest)
       ? {
           publicData: {
-            userType,
+            ...userTypeMaybe,
             ...pickUserFieldsData(rest, 'public', userType, userFields),
           },
           privateData: {

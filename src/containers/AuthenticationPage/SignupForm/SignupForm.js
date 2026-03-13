@@ -10,7 +10,6 @@ import { getPropsForCustomUserFieldInputs } from '../../../util/userHelpers';
 
 import { Form, PrimaryButton, FieldTextInput, CustomExtendedDataField } from '../../../components';
 
-import FieldSelectUserType from '../FieldSelectUserType';
 import UserFieldDisplayName from '../UserFieldDisplayName';
 import UserFieldPhoneNumber from '../UserFieldPhoneNumber';
 
@@ -103,10 +102,9 @@ const SignupFormComponent = props => (
       // only fields with no user type id limitation are selected.
       const userFieldProps = getPropsForCustomUserFieldInputs(userFields, userType);
 
-      const noUserTypes = !userType && !(userTypes?.length > 0);
       const userTypeConfig = userTypes.find(config => config.userType === userType);
-      const showDefaultUserFields = userType || noUserTypes;
-      const showCustomUserFields = (userType || noUserTypes) && userFieldProps?.length > 0;
+      const showDefaultUserFields = true;
+      const showCustomUserFields = userFieldProps?.length > 0;
 
       const classes = classNames(rootClassName || css.root, className);
       const submitInProgress = inProgress;
@@ -114,13 +112,6 @@ const SignupFormComponent = props => (
 
       return (
         <Form className={classes} onSubmit={handleSubmit}>
-          <FieldSelectUserType
-            name="userType"
-            userTypes={userTypes}
-            hasExistingUserType={!!preselectedUserType}
-            intl={intl}
-          />
-
           {showDefaultUserFields ? (
             <div className={css.defaultUserFields}>
               <FieldTextInput

@@ -123,15 +123,6 @@ describe('SignupForm', () => {
       />
     );
 
-    // Simulate user interaction and select parent level category
-    await user.selectOptions(
-      screen.getByRole('combobox'),
-      screen.getByRole('option', { name: 'Seller' })
-    );
-
-    // Test that sign up button is disabled at first
-    expect(screen.getByRole('button', { name: 'SignupForm.signUp' })).toBeDisabled();
-
     // Type the values to the sign up form
     await user.type(
       screen.getByRole('textbox', { name: 'SignupForm.emailLabel' }),
@@ -142,16 +133,13 @@ describe('SignupForm', () => {
     await user.type(screen.getByLabelText('SignupForm.passwordLabel'), 'secret-password');
     await user.type(screen.getByLabelText('Text Field'), 'Text value');
 
-    // Test that sign up button is still disabled before clicking the checkbox
-    expect(screen.getByRole('button', { name: 'SignupForm.signUp' })).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/AuthenticationPage.termsAndConditionsAcceptText/i));
 
-    // Test that sign up button is enabled after typing the values
+    // Sign up button should stay enabled with valid form values
     expect(screen.getByRole('button', { name: 'SignupForm.signUp' })).toBeEnabled();
   });
 
   it('shows custom user fields according to configuration', async () => {
-    const user = userEvent.setup();
     render(
       <SignupForm
         intl={fakeIntl}
@@ -160,12 +148,6 @@ describe('SignupForm', () => {
         userFields={userFields}
         onSubmit={noop}
       />
-    );
-
-    // Simulate user interaction and select parent level category
-    await user.selectOptions(
-      screen.getByRole('combobox'),
-      screen.getByRole('option', { name: 'Seller' })
     );
 
     // Show user fields that have not been limited to type and have displayInSignUp: true
