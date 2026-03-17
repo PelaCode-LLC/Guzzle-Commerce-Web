@@ -249,7 +249,10 @@ export const AuthenticationForms = props => {
       {isSignupEmailTakenError(signupError) ? (
         <FormattedMessage id="AuthenticationPage.signupFailedEmailAlreadyTaken" />
       ) : (
-        <FormattedMessage id="AuthenticationPage.signupFailed" />
+        <>
+          <FormattedMessage id="AuthenticationPage.signupFailed" />
+          {signupError?.message ? <span>{` ${signupError.message}`}</span> : null}
+        </>
       )}
     </div>
   );

@@ -8,12 +8,19 @@ const { UUID, Money } = sdkTypes;
 const handleResponse = async res => {
   const contentType = res.headers.get('Content-Type') || '';
   if (!res.ok) {
-    let err;
+    let payload;
     if (contentType.includes('application/json')) {
-      err = await res.json();
+      payload = await res.json();
     } else {
-      err = { error: await res.text() };
+      payload = { error: await res.text() };
     }
+    const message = payload?.error || payload?.message || res.statusText || 'Request failed';
+    const err = {
+      ...payload,
+      message,
+      status: res.status,
+      statusText: res.statusText,
+    };
     throw err;
   }
   if (contentType.includes('application/json')) {
