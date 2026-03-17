@@ -85,14 +85,25 @@ const logoutThunk = createAsyncThunk(
   'auth/logout',
   (_, thunkAPI) => {
     const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+    const hasLocalJwt = !!localStorage.getItem('jwt');
+
+    const clearSessionLocally = () => {
+      dispatch(clearCurrentUser());
+      log.clearUserId();
+      return true;
+    };
+
+    const shouldUseSdkLogout =
+      typeof sdk?.logout === 'function' && (useSharetribeConsole || !hasLocalJwt);
+
+    if (!shouldUseSdkLogout) {
+      return Promise.resolve(clearSessionLocally());
+    }
 
     return sdk
       .logout()
-      .then(() => {
-        dispatch(clearCurrentUser());
-        log.clearUserId();
-        return true;
-      })
+      .then(() => clearSessionLocally())
       .catch(e => rejectWithValue(storableError(e)));
   },
   {
