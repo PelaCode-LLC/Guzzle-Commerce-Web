@@ -13,6 +13,14 @@ const createListingSchema = Joi.object({
   ),
 });
 
+const toAuthorName = row => {
+  const firstName = row?.author_first_name || '';
+  const lastName = row?.author_last_name || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  return fullName || row?.author_email || null;
+};
+
 const createListing = async (req, res) => {
   const { error, value } = createListingSchema.validate(req.body);
   if (error) {
@@ -26,7 +34,10 @@ const createListing = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO listings (user_id, title, description, category, price, currency, image_url, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
-       RETURNING id, user_id, title, description, category, price, currency, image_url, status, created_at`,
+       RETURNING id, user_id, title, description, category, price, currency, image_url, status, created_at,
+                 (SELECT first_name FROM users WHERE id = user_id) AS author_first_name,
+                 (SELECT last_name FROM users WHERE id = user_id) AS author_last_name,
+                 (SELECT email FROM users WHERE id = user_id) AS author_email`,
       [userId, title, description || null, category || null, price, currency, imageUrl || null]
     );
 
@@ -40,6 +51,7 @@ const createListing = async (req, res) => {
       price: listing.price,
       currency: listing.currency,
       imageUrl: listing.image_url,
+      authorName: toAuthorName(listing),
       status: listing.status,
       createdAt: listing.created_at,
     });
@@ -53,7 +65,22 @@ const getListings = async (req, res) => {
   const { search, category, minPrice, maxPrice, limit = 20, offset = 0 } = req.query;
 
   try {
-    let query = 'SELECT id, user_id, title, description, category, price, currency, image_url, status, created_at FROM listings WHERE status = $1';
+    let query = `SELECT l.id,
+              l.user_id,
+              l.title,
+              l.description,
+              l.category,
+              l.price,
+              l.currency,
+              l.image_url,
+              l.status,
+              l.created_at,
+              u.first_name AS author_first_name,
+              u.last_name AS author_last_name,
+              u.email AS author_email
+           FROM listings l
+           LEFT JOIN users u ON u.id = l.user_id
+           WHERE l.status = $1`;
     const params = ['active'];
 
     if (search) {
@@ -117,6 +144,7 @@ const getListings = async (req, res) => {
       price: l.price,
       currency: l.currency,
       imageUrl: l.image_url,
+      authorName: toAuthorName(l),
       status: l.status,
       createdAt: l.created_at,
     }));
@@ -138,8 +166,22 @@ const getListingById = async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT id, user_id, title, description, category, price, currency, image_url, status, created_at
-       FROM listings WHERE id = $1`,
+      `SELECT l.id,
+              l.user_id,
+              l.title,
+              l.description,
+              l.category,
+              l.price,
+              l.currency,
+              l.image_url,
+              l.status,
+              l.created_at,
+              u.first_name AS author_first_name,
+              u.last_name AS author_last_name,
+              u.email AS author_email
+       FROM listings l
+       LEFT JOIN users u ON u.id = l.user_id
+       WHERE l.id = $1`,
       [id]
     );
 
@@ -157,6 +199,7 @@ const getListingById = async (req, res) => {
       price: listing.price,
       currency: listing.currency,
       imageUrl: listing.image_url,
+      authorName: toAuthorName(listing),
       status: listing.status,
       createdAt: listing.created_at,
     });
@@ -193,7 +236,10 @@ const updateListing = async (req, res) => {
            status = COALESCE($7, status),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $8
-       RETURNING id, user_id, title, description, category, price, currency, image_url, status, created_at`,
+       RETURNING id, user_id, title, description, category, price, currency, image_url, status, created_at,
+                 (SELECT first_name FROM users WHERE id = user_id) AS author_first_name,
+                 (SELECT last_name FROM users WHERE id = user_id) AS author_last_name,
+                 (SELECT email FROM users WHERE id = user_id) AS author_email`,
       [title, description, category, price, currency, imageUrl, status, id]
     );
 
@@ -207,6 +253,7 @@ const updateListing = async (req, res) => {
       price: listing.price,
       currency: listing.currency,
       imageUrl: listing.image_url,
+      authorName: toAuthorName(listing),
       status: listing.status,
       createdAt: listing.created_at,
     });
