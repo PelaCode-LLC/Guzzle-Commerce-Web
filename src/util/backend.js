@@ -303,15 +303,15 @@ export const toSdkOwnListingsQueryResponse = (payload, page = 1, perPage = 42) =
   const mapped = listings.map(listing => {
     const converted = toSdkOwnListingResponse(listing).data;
     const ownListing = converted.data;
-    const author = converted.included[0];
-    return { ownListing, author };
+    const included = converted.included || [];
+    return { ownListing, included };
   });
   const totalItems = Number(payload?.total || listings.length || 0);
 
   return {
     data: {
       data: mapped.map(m => m.ownListing),
-      included: mapped.map(m => m.author),
+      included: mapped.flatMap(m => m.included),
       meta: {
         page,
         perPage,

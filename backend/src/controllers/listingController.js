@@ -84,26 +84,27 @@ const getListings = async (req, res) => {
     const params = ['active'];
 
     if (search) {
-      query += ` AND (title ILIKE $${params.length + 1} OR description ILIKE $${params.length + 1})`;
+      query += ` AND (l.title ILIKE $${params.length + 1} OR l.description ILIKE $${params.length + 1})`;
       params.push(`%${search}%`);
     }
 
     if (category) {
-      query += ` AND category = $${params.length + 1}`;
+      query += ` AND l.category = $${params.length + 1}`;
       params.push(category);
     }
 
     if (minPrice) {
-      query += ` AND price >= $${params.length + 1}`;
+      query += ` AND l.price >= $${params.length + 1}`;
       params.push(minPrice);
     }
 
     if (maxPrice) {
-      query += ` AND price <= $${params.length + 1}`;
+      query += ` AND l.price <= $${params.length + 1}`;
       params.push(maxPrice);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+    query +=
+      ' ORDER BY l.created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
