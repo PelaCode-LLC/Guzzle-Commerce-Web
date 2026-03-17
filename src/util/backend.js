@@ -2,7 +2,21 @@ import { apiBaseUrl } from './api';
 import { types as sdkTypes } from './sdkLoader';
 
 // helpers to interact with our custom backend API
-const base = apiBaseUrl();
+const backendBaseUrl = () => {
+  const configured = process.env.REACT_APP_CUSTOM_BACKEND_URL;
+  if (configured) {
+    return configured.replace(/\/$/, '');
+  }
+
+  // Development fallback for local custom backend server.
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5000';
+  }
+
+  return apiBaseUrl();
+};
+
+const base = backendBaseUrl();
 const { UUID, Money } = sdkTypes;
 
 const handleResponse = async res => {
