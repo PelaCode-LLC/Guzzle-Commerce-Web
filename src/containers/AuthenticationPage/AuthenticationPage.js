@@ -237,9 +237,17 @@ export const AuthenticationForms = props => {
     });
   };
 
+  const isInvalidCredentialsError = /invalid email or password/i.test(loginError?.message || '');
   const loginErrorMessage = (
     <div className={css.error}>
-      <FormattedMessage id="AuthenticationPage.loginFailed" />
+      {isInvalidCredentialsError ? (
+        <FormattedMessage id="AuthenticationPage.loginFailed" />
+      ) : (
+        <>
+          <FormattedMessage id="AuthenticationPage.loginFailed" />
+          {loginError?.message ? <span>{` ${loginError.message}`}</span> : null}
+        </>
+      )}
     </div>
   );
 

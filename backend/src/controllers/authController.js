@@ -16,17 +16,22 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+const normalizeEmail = email => String(email || '').trim().toLowerCase();
+
 const register = async (req, res) => {
   const { error, value } = registerSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { email, password, firstName, lastName } = value;
+  const { password, firstName, lastName } = value;
+  const email = normalizeEmail(value.email);
 
   try {
     // Check if user exists
-    const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    const existingUser = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [
+      email,
+    ]);
     if (existingUser.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -74,13 +79,15 @@ const login = async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { email, password } = value;
+  const { password } = value;
+  const email = normalizeEmail(value.email);
 
   try {
     // Find user
-    const result = await pool.query('SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = $1', [
-      email,
-    ]);
+    const result = await pool.query(
+      'SELECT id, email, password_hash, first_name, last_name FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password' });
