@@ -225,6 +225,7 @@ const authSlice = createSlice({
       })
       .addCase(signupThunk.fulfilled, state => {
         state.signupInProgress = false;
+        state.isAuthenticated = true;
       })
       .addCase(signupThunk.rejected, (state, action) => {
         state.signupInProgress = false;

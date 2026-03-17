@@ -166,6 +166,7 @@ export const AuthenticationForms = props => {
     signupError,
     authInProgress,
     submitSignup,
+    onSignupSuccess,
     termsAndConditions,
   } = props;
   const config = useConfiguration();
@@ -229,7 +230,11 @@ export const AuthenticationForms = props => {
       },
     };
 
-    submitSignup(params);
+    return submitSignup(params).then(() => {
+      if (typeof onSignupSuccess === 'function') {
+        onSignupSuccess();
+      }
+    });
   };
 
   const loginErrorMessage = (
@@ -420,6 +425,7 @@ export const AuthenticationOrConfirmInfoForm = props => {
     signupError,
     confirmError,
     termsAndConditions,
+    onSignupSuccess,
   } = props;
   const isConfirm = tab === 'confirm';
   const isLogin = tab === 'login';
@@ -446,6 +452,7 @@ export const AuthenticationOrConfirmInfoForm = props => {
       submitLogin={submitLogin}
       authInProgress={authInProgress}
       submitSignup={submitSignup}
+      onSignupSuccess={onSignupSuccess}
       termsAndConditions={termsAndConditions}
     ></AuthenticationForms>
   );
@@ -525,6 +532,7 @@ export const AuthenticationPageComponent = props => {
   const [mounted, setMounted] = useState(false);
 
   const config = useConfiguration();
+  const routeConfiguration = useRouteConfiguration();
   const intl = useIntl();
 
   useEffect(() => {
@@ -546,6 +554,7 @@ export const AuthenticationPageComponent = props => {
     currentUser,
     isAuthenticated,
     location,
+    history,
     params: pathParams,
     loginError,
     scrollingDisabled,
@@ -639,6 +648,11 @@ export const AuthenticationPageComponent = props => {
     </p>
   ) : null;
 
+  const handleSignupSuccess = () => {
+    const landingPagePath = pathByRouteName('LandingPage', routeConfiguration);
+    history.push(landingPagePath, { signupSuccess: true });
+  };
+
   return (
     <Page
       title={schemaTitle}
@@ -687,6 +701,7 @@ export const AuthenticationPageComponent = props => {
               idpAuthError={authError}
               signupError={signupError}
               confirmError={confirmError}
+              onSignupSuccess={handleSignupSuccess}
               termsAndConditions={
                 <TermsAndConditions
                   onOpenTermsOfService={() => setTosModalOpen(true)}

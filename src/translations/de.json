@@ -588,6 +588,7 @@
   "LoadableComponentErrorBoundaryPage.description": "Es sieht so aus, als müsste die App aktualisiert werden! Bitte aktualisiere die Seite oder kehre zu {link} zurück.",
   "LoadableComponentErrorBoundaryPage.heading": "Hoppla, wir konnten die Seite nicht abrufen.",
   "LoadableComponentErrorBoundaryPage.landingPageLink": "Landing Page",
+  "LandingPage.signupSuccess": "Registrierung erfolgreich.",
   "LocationAutocompleteInput.currentLocation": "Aktueller Ort",
   "LocationAutocompleteInput.screenreader.search": "Suche",
   "LoginForm.emailInvalid": "Eine gültige E-Mail-Adresse wird benötigt.",

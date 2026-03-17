@@ -1,0 +1,21 @@
+.signupSuccessToast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background-color: #1f7a35;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (--viewportMedium) {
+  .signupSuccessToast {
+    top: 32px;
+    padding: 14px 22px;
+  }
+}

@@ -588,6 +588,7 @@
   "LoadableComponentErrorBoundaryPage.description": "Il semble que l'application doive être mise à jour ! Veuillez actualiser la page ou revenir à {link}.",
   "LoadableComponentErrorBoundaryPage.heading": "Oups, nous n'avons pas pu récupérer la page.",
   "LoadableComponentErrorBoundaryPage.landingPageLink": "la page d'accueil",
+  "LandingPage.signupSuccess": "Inscription réussie.",
   "LocationAutocompleteInput.currentLocation": "Emplacement actuel",
   "LocationAutocompleteInput.screenreader.search": "Recherche",
   "LoginForm.emailInvalid": "Une adresse email valide est obligatoire.",

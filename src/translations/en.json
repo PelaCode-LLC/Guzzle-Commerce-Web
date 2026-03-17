@@ -589,6 +589,7 @@
   "LoadableComponentErrorBoundaryPage.description": "It looks like the app needs to be updated! Please refresh the page or go back to {link}.",
   "LoadableComponentErrorBoundaryPage.heading": "Oops, we couldn't fetch the page.",
   "LoadableComponentErrorBoundaryPage.landingPageLink": "landing page",
+  "LandingPage.signupSuccess": "Sign up successful.",
   "LocationAutocompleteInput.currentLocation": "Current location",
   "LocationAutocompleteInput.screenreader.search": "Search",
   "LoginForm.emailInvalid": "A valid email address is required.",
