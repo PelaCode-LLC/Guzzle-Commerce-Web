@@ -166,6 +166,82 @@ const createImageEntity = listing => {
   };
 };
 
+const createProfileImageEntity = (userId, avatarUrl) => {
+  if (!avatarUrl) {
+    return null;
+  }
+
+  const imageId = new UUID(toUuidFromBackendId(`8${userId || 1}`));
+  const variants = {
+    'square-small': {
+      name: 'square-small',
+      width: 40,
+      height: 40,
+      url: avatarUrl,
+    },
+    'square-small2x': {
+      name: 'square-small2x',
+      width: 80,
+      height: 80,
+      url: avatarUrl,
+    },
+    'square-xsmall': {
+      name: 'square-xsmall',
+      width: 40,
+      height: 40,
+      url: avatarUrl,
+    },
+    'square-xsmall2x': {
+      name: 'square-xsmall2x',
+      width: 80,
+      height: 80,
+      url: avatarUrl,
+    },
+  };
+
+  return {
+    id: imageId,
+    type: 'image',
+    attributes: {
+      variants,
+    },
+  };
+};
+
+const fileToDataUrl = file =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+
+export const uploadProfileImageBackend = async (file, userId) => {
+  if (!file) {
+    throw new Error('Missing image file');
+  }
+
+  const avatarUrl = await fileToDataUrl(file);
+  const uploadedImage = createProfileImageEntity(userId, avatarUrl);
+
+  return {
+    avatarUrl,
+    uploadedImage,
+  };
+};
+
+export const updateCurrentUserProfileBackend = async (token, profileData) => {
+  const res = await fetch(`${base}/api/users/me`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+  return handleResponse(res);
+};
+
 export const toUuidFromBackendId = value => {
   const numeric = Number(value);
   const safe = Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
@@ -201,6 +277,8 @@ export const toSdkCurrentUser = user => {
   const lastName = user?.lastName || '';
   const fullName = `${firstName} ${lastName}`.trim();
   const displayName = fullName || user?.email || 'User';
+  const avatarUrl = user?.avatarUrl || null;
+  const profileImage = createProfileImageEntity(user?.id || 1, avatarUrl);
 
   return {
     id: new UUID(toUuidFromBackendId(user?.id || 1)),
@@ -212,6 +290,7 @@ export const toSdkCurrentUser = user => {
       profile: {
         firstName,
         lastName,
+        bio: user?.bio || '',
         displayName,
         abbreviatedName: abbreviateName(displayName),
         publicData: {},
@@ -219,6 +298,7 @@ export const toSdkCurrentUser = user => {
         privateData: {},
       },
     },
+    profileImage,
     effectivePermissionSet: {
       id: new UUID('00000000-0000-0000-0000-000000000001'),
       type: 'permissionSet',

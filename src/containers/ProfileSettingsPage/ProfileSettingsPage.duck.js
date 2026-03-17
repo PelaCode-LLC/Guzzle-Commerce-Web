@@ -2,6 +2,12 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { denormalisedResponseEntities } from '../../util/data';
 import { storableError } from '../../util/errors';
 import { setCurrentUser } from '../../ducks/user.duck';
+import {
+  toBackendIdFromUuid,
+  toSdkCurrentUser,
+  updateCurrentUserProfileBackend,
+  uploadProfileImageBackend,
+} from '../../util/backend';
 
 // ================ Async Thunks ================ //
 
@@ -10,7 +16,18 @@ import { setCurrentUser } from '../../ducks/user.duck';
 //////////////////
 export const uploadImageThunk = createAsyncThunk(
   'ProfileSettingsPage/uploadImage',
-  ({ id, file }, { rejectWithValue, extra: sdk }) => {
+  ({ id, file }, { rejectWithValue, extra: sdk, getState }) => {
+    const hasLocalJwt = !!localStorage.getItem('jwt');
+
+    if (hasLocalJwt) {
+      const currentUser = getState()?.user?.currentUser;
+      const userId = toBackendIdFromUuid(currentUser?.id);
+
+      return uploadProfileImageBackend(file, userId)
+        .then(({ avatarUrl, uploadedImage }) => ({ id, avatarUrl, uploadedImage }))
+        .catch(e => rejectWithValue({ id, error: storableError(e) }));
+    }
+
     const bodyParams = {
       image: file,
     };
@@ -40,7 +57,30 @@ export const uploadImage = actionPayload => dispatch => {
 ////////////////////
 export const updateProfileThunk = createAsyncThunk(
   'ProfileSettingsPage/updateProfile',
-  (actionPayload, { dispatch, rejectWithValue, extra: sdk }) => {
+  (actionPayload, { dispatch, rejectWithValue, extra: sdk, getState }) => {
+    const hasLocalJwt = !!localStorage.getItem('jwt');
+
+    if (hasLocalJwt) {
+      const token = localStorage.getItem('jwt');
+      const pageState = getState()?.ProfileSettingsPage || {};
+      const uploadedAvatarUrl = pageState?.image?.avatarUrl;
+
+      const payload = {
+        firstName: actionPayload?.firstName,
+        lastName: actionPayload?.lastName,
+        bio: actionPayload?.bio,
+        ...(uploadedAvatarUrl ? { avatarUrl: uploadedAvatarUrl } : {}),
+      };
+
+      return updateCurrentUserProfileBackend(token, payload)
+        .then(resp => {
+          const currentUser = toSdkCurrentUser(resp?.user || {});
+          dispatch(setCurrentUser(currentUser));
+          return resp;
+        })
+        .catch(e => rejectWithValue(storableError(e)));
+    }
+
     const queryParams = {
       expand: true,
       include: ['profileImage'],
@@ -97,9 +137,9 @@ const profileSettingsPageSlice = createSlice({
         state.uploadImageError = null;
       })
       .addCase(uploadImageThunk.fulfilled, (state, action) => {
-        const { id, uploadedImage } = action.payload;
+        const { id, uploadedImage, avatarUrl } = action.payload;
         const { file } = state.image || {};
-        state.image = { id, imageId: uploadedImage.id, file, uploadedImage };
+        state.image = { id, imageId: uploadedImage.id, file, uploadedImage, avatarUrl };
         state.uploadInProgress = false;
       })
       .addCase(uploadImageThunk.rejected, (state, action) => {
