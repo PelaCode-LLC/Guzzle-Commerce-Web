@@ -196,9 +196,9 @@ const fetchCurrentUserPayloadCreator = (options = {}, thunkAPI) => {
         return currentUser;
       })
       .catch(e => {
-        if (sdk && typeof sdk.authInfo === 'function') {
-          dispatch(authInfo());
-        }
+        // Remove invalid/expired JWT so authInfo() correctly reports unauthenticated
+        localStorage.removeItem('jwt');
+        dispatch(authInfo());
         log.error(e, 'fetch-current-user-backend-failed');
         return rejectWithValue(storableError(e));
       });

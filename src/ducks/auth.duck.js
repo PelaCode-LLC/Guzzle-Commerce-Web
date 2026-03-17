@@ -43,6 +43,14 @@ const initialState = {
 
 const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
   const { extra: sdk } = thunkAPI;
+
+  // If there is a local JWT (custom backend auth), report as authenticated
+  // without hitting the Sharetribe SDK which knows nothing about our JWT session.
+  const hasJwt = typeof localStorage !== 'undefined' && !!localStorage.getItem('jwt');
+  if (hasJwt) {
+    return Promise.resolve({ isAnonymous: false, source: 'jwt' });
+  }
+
   if (!sdk || typeof sdk.authInfo !== 'function') {
     return Promise.resolve(null);
   }
