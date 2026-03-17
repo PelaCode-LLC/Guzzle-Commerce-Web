@@ -7,7 +7,10 @@ const createListingSchema = Joi.object({
   category: Joi.string().max(100),
   price: Joi.number().positive().required(),
   currency: Joi.string().valid('USD', 'EUR', 'GBP').default('USD'),
-  imageUrl: Joi.string().uri(),
+  imageUrl: Joi.alternatives().try(
+    Joi.string().uri(),
+    Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,/)
+  ),
 });
 
 const createListing = async (req, res) => {

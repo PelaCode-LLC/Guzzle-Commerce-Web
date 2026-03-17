@@ -195,7 +195,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageAvailability')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
   });
 
   it('Booking (day): closed', () => {
@@ -249,7 +249,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageAvailability')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
 
     expect(tree.getByText('ManageListingCard.closedListing')).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.openListing')).toBeInTheDocument();
@@ -306,7 +306,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageAvailability')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
 
     expect(tree.getByText('ManageListingCard.pendingApproval')).toBeInTheDocument();
   });
@@ -363,7 +363,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageAvailability')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
 
     expect(tree.getByText('ManageListingCard.draftOverlayText')).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.finishListingDraft')).toBeInTheDocument();
@@ -419,7 +419,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.priceNotSet')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageAvailability')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
   });
 
   it('Purchase (item): normal', () => {
@@ -480,7 +480,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
   });
 
   it('Purchase (item): normal out-of-stock', () => {
@@ -542,11 +542,11 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument(); //fakeIntl
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
 
     // Out of stock
     expect(tree.getByText('ManageListingCard.outOfStockOverlayText')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.setPriceAndStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.closeListingTextOr')).toBeInTheDocument();
   });
 
@@ -609,7 +609,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument(); //fakeIntl
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
 
     expect(tree.getByText('ManageListingCard.draftOverlayText')).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.finishListingDraft')).toBeInTheDocument();
@@ -673,7 +673,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.priceNotSet')).toBeInTheDocument();
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.manageStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
   });
 
   it('Purchase (item): no stock', () => {
@@ -728,7 +728,7 @@ describe('ManageListingCard', () => {
     expect(tree.getByText('ManageListingCard.price')).toBeInTheDocument(); //fakeIntl
     expect(tree.getByText(/the Listing/i)).toBeInTheDocument();
     expect(tree.getByText('ManageListingCard.editListing')).toBeInTheDocument();
-    expect(tree.getByText('ManageListingCard.setPriceAndStock')).toBeInTheDocument();
+    expect(tree.getByText('ManageListingCard.deleteListing')).toBeInTheDocument();
   });
 
   it('Purchase (item): oneItem', () => {
@@ -822,3 +822,4 @@ describe('ManageListingCard', () => {
     expect(tree.asFragment().firstChild).toMatchSnapshot();
   });
 });
+

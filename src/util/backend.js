@@ -110,6 +110,48 @@ export const fetchListingByIdBackend = async listingId => {
 
 const toHex = value => Number(value).toString(16).padStart(12, '0');
 
+const imageVariantWidths = {
+  'scaled-small': 400,
+  'scaled-medium': 800,
+  'scaled-large': 1200,
+  'scaled-xlarge': 1600,
+  'listing-card': 400,
+  'listing-card-2x': 800,
+  'listing-card-4x': 1600,
+  'listing-card-6x': 2400,
+  facebook: 1200,
+  twitter: 800,
+  'square-small': 40,
+  'square-small2x': 80,
+};
+
+const createImageEntity = listing => {
+  const imageUrl = listing?.imageUrl;
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  const imageId = new UUID(toUuidFromBackendId(`9${listing.id || 1}`));
+  const variants = Object.entries(imageVariantWidths).reduce((acc, [name, width]) => {
+    acc[name] = {
+      name,
+      width,
+      height: width,
+      url: imageUrl,
+    };
+    return acc;
+  }, {});
+
+  return {
+    id: imageId,
+    type: 'image',
+    attributes: {
+      variants,
+    },
+  };
+};
+
 export const toUuidFromBackendId = value => {
   const numeric = Number(value);
   const safe = Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
@@ -180,6 +222,7 @@ const toSdkListing = listing => {
   const authorUuid = new UUID(toUuidFromBackendId(listing.userId || 1));
   const displayName = listing.authorName || `User ${listing.userId || ''}`.trim();
   const amount = Math.round(Number(listing.price || 0) * 100);
+  const image = createImageEntity(listing);
 
   return {
     listing: {
@@ -211,7 +254,14 @@ const toSdkListing = listing => {
           },
         },
         images: {
-          data: [],
+          data: image
+            ? [
+                {
+                  id: image.id,
+                  type: 'image',
+                },
+              ]
+            : [],
         },
       },
     },
@@ -225,6 +275,7 @@ const toSdkListing = listing => {
         },
       },
     },
+    image,
   };
 };
 
@@ -236,7 +287,7 @@ export const toSdkSearchResponse = (payload, page = 1, perPage = 24) => {
   return {
     data: {
       data: mapped.map(m => m.listing),
-      included: mapped.map(m => m.author),
+      included: mapped.flatMap(m => (m.image ? [m.author, m.image] : [m.author])),
       meta: {
         page,
         perPage,
@@ -276,7 +327,7 @@ export const toSdkSingleListingResponse = listing => {
   return {
     data: {
       data: mapped.listing,
-      included: [mapped.author],
+      included: mapped.image ? [mapped.author, mapped.image] : [mapped.author],
     },
   };
 };
@@ -304,7 +355,7 @@ export const toSdkOwnListingResponse = (listing, forcedState) => {
           state: ownListingState,
         },
       },
-      included: [mapped.author],
+      included: mapped.image ? [mapped.author, mapped.image] : [mapped.author],
     },
   };
 };

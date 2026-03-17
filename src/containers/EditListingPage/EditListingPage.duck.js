@@ -49,6 +49,49 @@ const imageIds = images => {
   return images ? images.map(img => img.imageId || img.id) : null;
 };
 
+const fileToDataUrl = file => {
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') {
+      resolve(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+};
+
+const resolveBackendImageUrl = async images => {
+  const firstImage = Array.isArray(images) ? images[0] : null;
+
+  if (!firstImage) {
+    return null;
+  }
+
+  if (typeof firstImage === 'string') {
+    return firstImage;
+  }
+
+  const existingVariantUrl =
+    firstImage?.attributes?.variants?.['scaled-large']?.url ||
+    firstImage?.attributes?.variants?.['listing-card']?.url ||
+    firstImage?.attributes?.variants?.square?.url ||
+    firstImage?.url ||
+    null;
+
+  if (existingVariantUrl) {
+    return existingVariantUrl;
+  }
+
+  if (firstImage.file) {
+    return fileToDataUrl(firstImage.file);
+  }
+
+  return null;
+};
+
 // After listing creation & update, we want to make sure that uploadedImages state is cleaned
 const updateUploadedImagesState = (state, payload) => {
   const { uploadedImages, uploadedImagesOrder } = state;
@@ -192,23 +235,27 @@ export const createListingDraftThunk = createAsyncThunk(
 
     if (!useSharetribeConsole) {
       const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
-      const listingPayload = {
-        title: rest.title,
-        description: rest.description,
-        category: rest?.publicData?.category1,
-        price:
-          typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
-        currency: rest?.price?.currency || config.currency || 'USD',
-      };
-      const cleanedPayload = Object.fromEntries(
-        Object.entries(listingPayload).filter(([, value]) => value !== null && value !== undefined)
-      );
-
       if (!token) {
         return rejectWithValue(storableError({ error: 'Missing authentication token' }));
       }
 
-      return createListingBackend(token, cleanedPayload)
+      return resolveBackendImageUrl(images)
+        .then(imageUrl => {
+          const listingPayload = {
+            title: rest.title,
+            description: rest.description,
+            category: rest?.publicData?.category1,
+            price:
+              typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
+            currency: rest?.price?.currency || config.currency || 'USD',
+            imageUrl,
+          };
+
+          return Object.fromEntries(
+            Object.entries(listingPayload).filter(([, value]) => value !== null && value !== undefined)
+          );
+        })
+        .then(cleanedPayload => createListingBackend(token, cleanedPayload))
         .then(createdListing => {
           const response = toSdkOwnListingResponse(createdListing, 'draft');
           dispatch(addMarketplaceEntities(response));
@@ -268,25 +315,30 @@ export const updateListingThunk = createAsyncThunk(
     if (!useSharetribeConsole) {
       const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
       const backendListingId = toBackendIdFromUuid(id?.uuid || id);
-      const listingPayload = {
-        title: rest.title,
-        description: rest.description,
-        category: rest?.publicData?.category1,
-        price:
-          typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : undefined,
-        currency: rest?.price?.currency,
-        status: rest.state,
-      };
-
-      const cleanedPayload = Object.fromEntries(
-        Object.entries(listingPayload).filter(([, value]) => typeof value !== 'undefined')
-      );
-
       if (!token) {
         return rejectWithValue(storableError({ error: 'Missing authentication token' }));
       }
 
-      return updateListingBackend(token, backendListingId, cleanedPayload)
+      return resolveBackendImageUrl(images)
+        .then(imageUrl => {
+          const listingPayload = {
+            title: rest.title,
+            description: rest.description,
+            category: rest?.publicData?.category1,
+            price:
+              typeof rest?.price?.amount === 'number'
+                ? Math.max(1, rest.price.amount / 100)
+                : undefined,
+            currency: rest?.price?.currency,
+            status: rest.state,
+            imageUrl: imageUrl || undefined,
+          };
+
+          return Object.fromEntries(
+            Object.entries(listingPayload).filter(([, value]) => typeof value !== 'undefined')
+          );
+        })
+        .then(cleanedPayload => updateListingBackend(token, backendListingId, cleanedPayload))
         .then(updatedListing => {
           const response = toSdkOwnListingResponse(updatedListing, 'draft');
           dispatch(addMarketplaceEntities(response));

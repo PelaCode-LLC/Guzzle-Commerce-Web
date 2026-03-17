@@ -295,53 +295,6 @@ const ShowOutOfStockOverlayMaybe = props => {
   ) : null;
 };
 
-const LinkToStockOrAvailabilityTab = props => {
-  const {
-    id,
-    slug,
-    title,
-    editListingLinkType,
-    isBookable,
-    hasListingType,
-    hasStockManagementInUse,
-    currentStock,
-    intl,
-  } = props;
-
-  if (!hasListingType || !(isBookable || hasStockManagementInUse)) {
-    return null;
-  }
-
-  return (
-    <>
-      <span className={css.manageLinksSeparator}>{' • '}</span>
-
-      {isBookable ? (
-        <NamedLink
-          className={css.manageLink}
-          name="EditListingPage"
-          params={{ id, slug, type: editListingLinkType, tab: 'availability' }}
-          ariaLabel={`${intl.formatMessage({
-            id: 'ManageListingCard.manageAvailability',
-          })}: ${title}`}
-        >
-          <FormattedMessage id="ManageListingCard.manageAvailability" />
-        </NamedLink>
-      ) : (
-        <NamedLink
-          className={css.manageLink}
-          name="EditListingPage"
-          params={{ id, slug, type: editListingLinkType, tab: 'pricing-and-stock' }}
-        >
-          {currentStock == null
-            ? intl.formatMessage({ id: 'ManageListingCard.setPriceAndStock' })
-            : intl.formatMessage({ id: 'ManageListingCard.manageStock' }, { currentStock })}
-        </NamedLink>
-      )}
-    </>
-  );
-};
-
 const PriceMaybe = props => {
   const { price, publicData, config, intl, foundListingTypeConfig } = props;
 
@@ -435,6 +388,7 @@ export const ManageListingCard = props => {
     renderSizes,
   } = props;
   const classes = classNames(rootClassName || css.root, className);
+  const showDeleteAction = showDeleteListingAction !== false;
   const currentListing = ensureOwnListing(listing);
   const id = currentListing.id.uuid;
   const { title = '', price, state, publicData } = currentListing.attributes;
@@ -574,24 +528,6 @@ export const ManageListingCard = props => {
                   </InlineTextButton>
                 </MenuItem>
 
-                {showDeleteListingAction ? (
-                  <MenuItem key="delete-listing">
-                    <InlineTextButton
-                      id={`deleteButton_${currentListing.id.uuid}`}
-                      rootClassName={menuItemClasses}
-                      onClick={event => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (!actionsInProgressListingId) {
-                          onToggleMenu(null);
-                          onDeleteListing(currentListing.id);
-                        }
-                      }}
-                    >
-                      <FormattedMessage id="ManageListingCard.deleteListing" />
-                    </InlineTextButton>
-                  </MenuItem>
-                ) : null}
               </MenuContent>
             </Menu>
           </div>
@@ -679,17 +615,24 @@ export const ManageListingCard = props => {
             <FormattedMessage id="ManageListingCard.editListing" />
           </NamedLink>
 
-          <LinkToStockOrAvailabilityTab
-            id={id}
-            slug={slug}
-            title={title}
-            editListingLinkType={editListingLinkType}
-            isBookable={isBookable}
-            currentStock={currentStock}
-            hasListingType={hasListingType}
-            hasStockManagementInUse={hasStockManagementInUse}
-            intl={intl}
-          />
+          {showDeleteAction ? (
+            <>
+              <span className={css.manageLinksSeparator}>{' • '}</span>
+              <InlineTextButton
+                id={`deleteButton_${currentListing.id.uuid}`}
+                rootClassName={css.manageLinkDelete}
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!actionsInProgressListingId) {
+                    onDeleteListing(currentListing.id);
+                  }
+                }}
+              >
+                <FormattedMessage id="ManageListingCard.deleteListing" />
+              </InlineTextButton>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

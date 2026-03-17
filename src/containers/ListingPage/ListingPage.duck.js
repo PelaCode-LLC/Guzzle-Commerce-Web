@@ -104,8 +104,6 @@ const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAP
     ...createImageVariantConfig(`${variantPrefix}-6x`, 2400, aspectRatio),
   };
 
-  const show = isOwn ? sdk.ownListings.show(params) : sdk.listings.show(params);
-
   if (!useSharetribeConsole || !sdk || !sdk.listings) {
     const backendId = toBackendIdFromUuid(listingId?.uuid || listingId);
     return fetchListingByIdBackend(backendId)
@@ -116,6 +114,8 @@ const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAP
       })
       .catch(e => rejectWithValue(storableError(e)));
   }
+
+  const show = isOwn ? sdk.ownListings.show(params) : sdk.listings.show(params);
 
   return show
     .then(data => {
@@ -441,7 +441,8 @@ const listingPageSlice = createSlice({
         // Data is handled by addMarketplaceEntities in the thunk
       })
       .addCase(showListingThunk.rejected, (state, action) => {
-        state.showListingError = action.payload;
+        state.showListingError =
+          action.payload || storableError(action.error || { message: 'Failed to load listing' });
       })
       .addCase(fetchReviewsThunk.pending, state => {
         state.fetchReviewsError = null;
