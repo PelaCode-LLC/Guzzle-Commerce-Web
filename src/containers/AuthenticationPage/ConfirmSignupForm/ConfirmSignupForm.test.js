@@ -144,16 +144,13 @@ describe('ConfirmSignupForm', () => {
       authInfo.lastName
     );
 
-    // Type a value in the required text field
-    await user.type(screen.getByLabelText('Text Field'), 'Text value');
-
     fireEvent.click(screen.getByLabelText(/AuthenticationPage.termsAndConditionsAcceptText/i));
 
     // Continue button should stay enabled with valid form values
     expect(screen.getByRole('button', { name: 'ConfirmSignupForm.signUp' })).toBeEnabled();
   });
 
-  it('shows custom user fields according to configuration', async () => {
+  it('does not show custom user fields in confirm signup flow', async () => {
     render(
       <ConfirmSignupForm
         authInfo={authInfo}
@@ -166,15 +163,10 @@ describe('ConfirmSignupForm', () => {
       />
     );
 
-    // Show user fields that have not been limited to type and have displayInSignUp: true
-    expect(screen.getByText('Enum Field 1')).toBeInTheDocument();
-    expect(screen.getByText('Text Field')).toBeInTheDocument();
-
-    // Don't show user fields that have displayInSignUp: false
+    // Custom user fields are intentionally hidden on signup confirmation.
+    expect(screen.queryByText('Enum Field 1')).toBeNull();
+    expect(screen.queryByText('Text Field')).toBeNull();
     expect(screen.queryByText('Boolean Field')).toBeNull();
-
-    // Don't show user fields that are limited to user types –
-    // ConfirmSignupForm does not support user types yet!
     expect(screen.queryByText('Enum Field 2')).toBeNull();
   });
 });

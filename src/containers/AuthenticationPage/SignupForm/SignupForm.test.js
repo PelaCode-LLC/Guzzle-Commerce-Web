@@ -131,7 +131,6 @@ describe('SignupForm', () => {
     await user.type(screen.getByRole('textbox', { name: 'SignupForm.firstNameLabel' }), 'Joe');
     await user.type(screen.getByRole('textbox', { name: 'SignupForm.lastNameLabel' }), 'Dunphy');
     await user.type(screen.getByLabelText('SignupForm.passwordLabel'), 'secret-password');
-    await user.type(screen.getByLabelText('Text Field'), 'Text value');
 
     fireEvent.click(screen.getByLabelText(/AuthenticationPage.termsAndConditionsAcceptText/i));
 
@@ -139,7 +138,7 @@ describe('SignupForm', () => {
     expect(screen.getByRole('button', { name: 'SignupForm.signUp' })).toBeEnabled();
   });
 
-  it('shows custom user fields according to configuration', async () => {
+  it('does not show custom user fields in signup flow', async () => {
     render(
       <SignupForm
         intl={fakeIntl}
@@ -150,14 +149,10 @@ describe('SignupForm', () => {
       />
     );
 
-    // Show user fields that have not been limited to type and have displayInSignUp: true
-    expect(screen.getByText('Enum Field 1')).toBeInTheDocument();
-    expect(screen.getByText('Text Field')).toBeInTheDocument();
-
-    // Don't show user fields that have displayInSignUp: false
+    // Custom user fields are intentionally hidden on signup.
+    expect(screen.queryByText('Enum Field 1')).toBeNull();
+    expect(screen.queryByText('Text Field')).toBeNull();
     expect(screen.queryByText('Boolean Field')).toBeNull();
-
-    // Don't show user fields that are limited to user types – SignupForm does not support user types yet!
     expect(screen.queryByText('Enum Field 2')).toBeNull();
   });
 });

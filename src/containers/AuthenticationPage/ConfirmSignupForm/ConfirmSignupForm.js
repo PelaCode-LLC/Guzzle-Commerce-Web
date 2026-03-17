@@ -54,9 +54,8 @@ const ConfirmSignupFormComponent = props => (
         })
       );
 
-      // Custom user fields. Since user types are not supported here,
-      // only fields with no user type id limitation are selected.
-      const userFieldProps = getPropsForCustomUserFieldInputs(userFields, userType);
+      // Custom user fields are intentionally hidden during signup confirmation.
+      const userFieldProps = [];
 
       const userTypeConfig = userTypes.find(config => config.userType === userType);
       const showDefaultUserFields = true;
