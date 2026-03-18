@@ -208,26 +208,30 @@ const createProfileImageEntity = (userId, avatarUrl) => {
   };
 };
 
-const fileToDataUrl = file =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
-  });
-
 export const uploadProfileImageBackend = async (file, userId) => {
   if (!file) {
     throw new Error('Missing image file');
   }
 
-  const avatarUrl = await fileToDataUrl(file);
+  const token = localStorage.getItem('jwt');
+  const formData = new FormData();
+  formData.append('image', file);
+
+  // Do NOT set Content-Type – let the browser set multipart/form-data with boundary
+  const res = await fetch(`${base}/api/users/me/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  const data = await handleResponse(res);
+  // Resolve relative path returned by backend against the backend base URL
+  const avatarUrl = data.avatarUrl.startsWith('http')
+    ? data.avatarUrl
+    : `${base}${data.avatarUrl}`;
   const uploadedImage = createProfileImageEntity(userId, avatarUrl);
 
-  return {
-    avatarUrl,
-    uploadedImage,
-  };
+  return { avatarUrl, uploadedImage };
 };
 
 export const updateCurrentUserProfileBackend = async (token, profileData) => {
@@ -317,6 +321,7 @@ const toSdkListing = listing => {
   const displayName = listing.authorName || `User ${listing.userId || ''}`.trim();
   const amount = Math.round(Number(listing.price || 0) * 100);
   const image = createImageEntity(listing);
+  const categoryLevel1 = listing.category || null;
 
   return {
     listing: {
@@ -333,6 +338,7 @@ const toSdkListing = listing => {
           listingType: 'default',
           transactionProcessAlias: 'default-purchase/release-1',
           unitType: 'item',
+          ...(categoryLevel1 ? { categoryLevel1 } : {}),
           cardStyle: 'default',
           pickupEnabled: false,
           shippingEnabled: false,

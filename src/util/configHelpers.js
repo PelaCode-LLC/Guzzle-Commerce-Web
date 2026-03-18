@@ -1,4 +1,5 @@
 import { subUnitDivisors } from '../config/settingsCurrency';
+import { localCategories } from '../config/localCategories';
 import { getSupportedProcessesInfo, isBookingProcessAlias } from '../transactions/transaction';
 
 // Generic helpers for validating config values
@@ -1581,12 +1582,14 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     defaultConfigs.listingMinimumPriceSubUnits;
 
   const validHostedCategories = validateCategoryConfig(configAsset.categories);
-  const categoryConfiguration = getBuiltInCategorySpecs(validHostedCategories);
+  const categoriesConfig = validHostedCategories?.length > 0 ? validHostedCategories : localCategories;
   const listingConfiguration = mergeListingConfig(
     configAsset,
     defaultConfigs,
-    validHostedCategories
+    categoriesConfig
   );
+
+  const normalizedCategoryConfiguration = getBuiltInCategorySpecs(categoriesConfig);
 
   return {
     // Use default configs as a starting point for app config.
@@ -1625,7 +1628,7 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     user: mergeUserConfig(configAsset, defaultConfigs),
 
     // Set category configuration (includes fixed key, array of categories etc.
-    categoryConfiguration,
+    categoryConfiguration: normalizedCategoryConfiguration,
 
     // Listing configuration comes entirely from hosted assets by default.
     listing: listingConfiguration,

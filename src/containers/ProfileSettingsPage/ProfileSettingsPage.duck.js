@@ -62,14 +62,12 @@ export const updateProfileThunk = createAsyncThunk(
 
     if (hasLocalJwt) {
       const token = localStorage.getItem('jwt');
-      const pageState = getState()?.ProfileSettingsPage || {};
-      const uploadedAvatarUrl = pageState?.image?.avatarUrl;
 
+      // Avatar is already persisted by the upload step; only update text profile fields here.
       const payload = {
         firstName: actionPayload?.firstName,
         lastName: actionPayload?.lastName,
         bio: actionPayload?.bio,
-        ...(uploadedAvatarUrl ? { avatarUrl: uploadedAvatarUrl } : {}),
       };
 
       return updateCurrentUserProfileBackend(token, payload)

@@ -3,6 +3,7 @@ import loadable from '@loadable/component';
 import { useIntl } from 'react-intl';
 
 import { useConfiguration } from '../../context/configurationContext';
+import { localCategoryCards } from '../../config/localCategories';
 import { NamedLink } from '../../components';
 import css from './FallbackPage.module.css';
 
@@ -11,15 +12,7 @@ const PageBuilder = loadable(() =>
 );
 
 const CATEGORY_PARAM_NAME = 'pub_categoryLevel1';
-const fallbackCategories = [
-  { id: 'cars & trucks', name: 'Cars & Trucks' },
-  { id: 'motorcycles', name: 'Motorcycles' },
-  { id: 'watercraft', name: 'Watercraft' },
-  { id: 'parts', name: 'Parts' },
-  { id: 'electronics', name: 'Electronics' },
-  { id: 'tools', name: 'Tools' },
-  { id: 'services', name: 'Services' },
-];
+const fallbackCategories = localCategoryCards;
 
 // Create fallback content (array of sections) in page asset format:
 export const fallbackSections = (error, categories) => ({
@@ -83,6 +76,7 @@ const SectionCategoryLinks = props => {
         <div className={css.categoryGrid}>
           {categoryCards.map(category => {
             const search = `?${CATEGORY_PARAM_NAME}=${encodeURIComponent(category.id)}`;
+            const categoryName = category.name || category.label || category.id;
 
             return (
               <NamedLink
@@ -91,7 +85,7 @@ const SectionCategoryLinks = props => {
                 to={{ search }}
                 className={css.categoryCard}
               >
-                <span className={css.categoryName}>{category.name}</span>
+                <span className={css.categoryName}>{categoryName}</span>
                 <span className={css.categoryAction}>
                   {intl.formatMessage({ id: 'LandingPage.localHome.browse' })}
                 </span>

@@ -241,10 +241,11 @@ export const createListingDraftThunk = createAsyncThunk(
 
       return resolveBackendImageUrl(images)
         .then(imageUrl => {
+          const category = rest?.publicData?.categoryLevel1 || rest?.publicData?.category1;
           const listingPayload = {
             title: rest.title,
             description: rest.description,
-            category: rest?.publicData?.category1,
+            category,
             price:
               typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
             currency: rest?.price?.currency || config.currency || 'USD',
@@ -321,10 +322,11 @@ export const updateListingThunk = createAsyncThunk(
 
       return resolveBackendImageUrl(images)
         .then(imageUrl => {
+          const category = rest?.publicData?.categoryLevel1 || rest?.publicData?.category1;
           const listingPayload = {
             title: rest.title,
             description: rest.description,
-            category: rest?.publicData?.category1,
+            category,
             price:
               typeof rest?.price?.amount === 'number'
                 ? Math.max(1, rest.price.amount / 100)
