@@ -1,14 +1,14 @@
 export const localCategories = [
-  { id: 'cars & trucks', label: 'Cars & Trucks' },
-  { id: 'motorcycles', label: 'Motorcycles' },
-  { id: 'watercraft', label: 'Watercraft' },
-  { id: 'parts', label: 'Parts' },
-  { id: 'electronics', label: 'Electronics' },
-  { id: 'tools', label: 'Tools' },
-  { id: 'services', label: 'Services' },
+  { id: 'cars & trucks', name: 'Cars & Trucks', label: 'Cars & Trucks' },
+  { id: 'motorcycles', name: 'Motorcycles', label: 'Motorcycles' },
+  { id: 'watercraft', name: 'Watercraft', label: 'Watercraft' },
+  { id: 'parts', name: 'Parts', label: 'Parts' },
+  { id: 'electronics', name: 'Electronics', label: 'Electronics' },
+  { id: 'tools', name: 'Tools', label: 'Tools' },
+  { id: 'services', name: 'Services', label: 'Services' },
 ];
 
 export const localCategoryCards = localCategories.map(category => ({
   id: category.id,
-  name: category.label,
+  name: category.name,
 }));
