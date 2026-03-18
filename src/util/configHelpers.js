@@ -1637,7 +1637,7 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     search: mergeSearchConfig(
       configAsset.search,
       defaultConfigs.search,
-      categoryConfiguration,
+      normalizedCategoryConfiguration,
       listingConfiguration.listingTypes
     ),
 
