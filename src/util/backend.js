@@ -117,6 +117,25 @@ export const searchListingsBackend = async params => {
   return handleResponse(res);
 };
 
+export const searchOwnListingsBackend = async (token, params) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, String(value));
+    }
+  });
+
+  const url = `${base}/api/listings/me${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse(res);
+};
+
 export const fetchListingByIdBackend = async listingId => {
   const res = await fetch(`${base}/api/listings/${listingId}`, { method: 'GET' });
   return handleResponse(res);

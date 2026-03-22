@@ -63,6 +63,12 @@ const createListing = async (req, res) => {
 
 const getListings = async (req, res) => {
   const { search, category, minPrice, maxPrice, limit = 20, offset = 0 } = req.query;
+  const onlyOwn = req.query.onlyOwn === 'true';
+  const ownerUserId = req.userId;
+
+  if (onlyOwn && !ownerUserId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   try {
     let query = `SELECT l.id,
@@ -103,6 +109,11 @@ const getListings = async (req, res) => {
       params.push(maxPrice);
     }
 
+    if (onlyOwn) {
+      query += ` AND l.user_id = $${params.length + 1}`;
+      params.push(ownerUserId);
+    }
+
     query +=
       ' ORDER BY l.created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
     params.push(limit, offset);
@@ -133,6 +144,11 @@ const getListings = async (req, res) => {
       countParams.push(maxPrice);
     }
 
+    if (onlyOwn) {
+      countQuery += ` AND user_id = $${countParams.length + 1}`;
+      countParams.push(ownerUserId);
+    }
+
     const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count);
 
@@ -160,6 +176,11 @@ const getListings = async (req, res) => {
     console.error('Get listings error:', error);
     res.status(500).json({ error: 'Failed to fetch listings' });
   }
+};
+
+const getOwnListings = (req, res) => {
+  req.query.onlyOwn = 'true';
+  return getListings(req, res);
 };
 
 const getListingById = async (req, res) => {
@@ -290,6 +311,7 @@ const deleteListing = async (req, res) => {
 module.exports = {
   createListing,
   getListings,
+  getOwnListings,
   getListingById,
   updateListing,
   deleteListing,

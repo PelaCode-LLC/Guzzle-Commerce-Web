@@ -3,6 +3,7 @@ const authMiddleware = require('../middleware/auth');
 const {
   createListing,
   getListings,
+  getOwnListings,
   getListingById,
   updateListing,
   deleteListing,
@@ -12,6 +13,9 @@ const router = express.Router();
 
 // GET /api/listings - Get all listings with search/filter
 router.get('/', getListings);
+
+// GET /api/listings/me - Get current user's listings
+router.get('/me', authMiddleware, getOwnListings);
 
 // GET /api/listings/:id - Get specific listing
 router.get('/:id', getListingById);

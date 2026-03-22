@@ -4,7 +4,7 @@ import { storableError } from '../../util/errors';
 import { createImageVariantConfig } from '../../util/sdkLoader';
 import { parse } from '../../util/urlHelpers';
 import {
-  searchListingsBackend,
+  searchOwnListingsBackend,
   toSdkOwnListingsQueryResponse,
   toBackendIdFromUuid,
   deleteListingBackend,
@@ -46,11 +46,16 @@ const queryOwnListingsPayloadCreator = (queryParams, { extra: sdk, dispatch, rej
   const params = { ...rest, perPage };
 
   if (!useSharetribeConsole) {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
     const page = Number(queryParams?.page || 1);
     const limit = Number(perPage || RESULT_PAGE_SIZE);
     const offset = Math.max(0, (page - 1) * limit);
 
-    return searchListingsBackend({ limit, offset })
+    if (!token) {
+      return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+    }
+
+    return searchOwnListingsBackend(token, { limit, offset })
       .then(payload => {
         const response = toSdkOwnListingsQueryResponse(payload, page, limit);
         dispatch(addOwnEntities(response));
@@ -184,7 +189,7 @@ const deleteListingPayloadCreator = (listingId, thunkAPI) => {
   const offset = Math.max(0, (page - 1) * limit);
 
   return deleteListingBackend(token, backendListingId)
-    .then(() => searchListingsBackend({ limit, offset }))
+    .then(() => searchOwnListingsBackend(token, { limit, offset }))
     .then(payload => {
       const response = toSdkOwnListingsQueryResponse(payload, page, limit);
       dispatch(addOwnEntities(response));
