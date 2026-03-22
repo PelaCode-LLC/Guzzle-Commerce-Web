@@ -46,13 +46,14 @@ cp .env.example .env
 Edit `.env`:
 
 ```
-DATABASE_URL=postgresql://user:password@localhost:5432/marketplace
+DATABASE_URL=postgresql://user:password@host:5432/marketplace
 PORT=5000
 NODE_ENV=development
 JWT_SECRET=your-super-secret-key-change-in-production
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 FRONTEND_URL=http://localhost:3000
+FRONTEND_URLS=
 ```
 
 ### 4. Initialize Database
@@ -78,6 +79,8 @@ The server will start at `http://localhost:5000` with nodemon watching for chang
 ```bash
 npm start
 ```
+
+For managed hosting and DNS setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## API Endpoints
 

@@ -1,35 +1,42 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// build PG config manually to avoid connectionString parsing issues
-const pgConfig = {
-  host: 'localhost',
-  port: 5432,
-  database: 'marketplace',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+const parseBoolean = (value, defaultValue = false) => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
 };
 
-// add credentials only if provided
-if (process.env.DB_USER) {
-  pgConfig.user = process.env.DB_USER;
-}
-if (process.env.DB_PASSWORD) {
-  pgConfig.password = process.env.DB_PASSWORD;
+const isProduction = process.env.NODE_ENV === 'production';
+const useConnectionString = Boolean(process.env.DATABASE_URL);
+const sslEnabled = isProduction && process.env.DATABASE_SSL_MODE !== 'disable';
+const rejectUnauthorized = parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, false);
+
+const pgConfig = useConnectionString
+  ? {
+      connectionString: process.env.DATABASE_URL,
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT || 5432),
+      database: process.env.DB_NAME || 'marketplace',
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+    };
+
+if (sslEnabled) {
+  pgConfig.ssl = { rejectUnauthorized };
 }
 
-// if DATABASE_URL is provided **and includes credentials**, let it override individual parts
-if (process.env.DATABASE_URL) {
-  // crude check: user:pass@ should appear after protocol
-  const url = process.env.DATABASE_URL;
-  const credentialsPresent = url.match(/^[^:]+:\/\/[^@]+@/);
-  if (credentialsPresent) {
-    Object.assign(pgConfig, { connectionString: url });
-  } else {
-    console.log('⚠️ DATABASE_URL has no credentials; using individual config values');
-  }
-}
+const safeLogConfig = {
+  ...pgConfig,
+  password: pgConfig.password ? '***' : undefined,
+  connectionString: pgConfig.connectionString ? '***' : undefined,
+};
 
-console.log('📦 PG config:', pgConfig);
+console.log('📦 PG config:', safeLogConfig);
 const pool = new Pool(pgConfig);
 
 pool.on('error', (err) => {
