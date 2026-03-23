@@ -2,6 +2,7 @@
   "name": "app",
   "version": "10.13.0",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "license": "Apache-2.0",
   "dependencies": {
     "@loadable/component": "^5.16.4",
