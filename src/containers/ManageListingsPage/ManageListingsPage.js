@@ -15,12 +15,12 @@ import { isScrollingDisabled, manageDisableScrolling } from '../../ducks/ui.duck
 
 import {
   H3,
+  IconSuccess,
   Page,
   PaginationLinks,
   UserNav,
   LayoutSingleColumn,
   NamedLink,
-  Modal,
 } from '../../components';
 
 import TopbarContainer from '../../containers/TopbarContainer/TopbarContainer';
@@ -30,12 +30,14 @@ import ManageListingCard from './ManageListingCard/ManageListingCard';
 
 import {
   closeListing,
+  deleteListing,
   openListing,
   getOwnListingsById,
   discardDraft,
 } from './ManageListingsPage.duck';
 import css from './ManageListingsPage.module.css';
 import DiscardDraftModal from './DiscardDraftModal/DiscardDraftModal';
+import DeleteListingModal from './DeleteListingModal/DeleteListingModal';
 
 const Heading = props => {
   const { listingsAreLoaded, pagination } = props;
@@ -106,19 +108,26 @@ export const ManageListingsPageComponent = props => {
   const [listingMenuOpen, setListingMenuOpen] = useState(null);
   const [discardDraftModalOpen, setDiscardDraftModalOpen] = useState(null);
   const [discardDraftModalId, setDiscardDraftModalId] = useState(null);
+  const [deleteListingModalOpen, setDeleteListingModalOpen] = useState(null);
+  const [deleteListingModalId, setDeleteListingModalId] = useState(null);
+  const [deleteListingSuccessVisible, setDeleteListingSuccessVisible] = useState(false);
   const history = useHistory();
   const routeConfiguration = useRouteConfiguration();
   const config = useConfiguration();
   const intl = useIntl();
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
 
   const {
     currentUser,
     closingListing,
     closingListingError,
+    deletingListing,
+    deletingListingError,
     discardingDraft,
     discardingDraftError,
     listings = [],
     onCloseListing,
+    onDeleteListing,
     onDiscardDraft,
     onOpenListing,
     openingListing,
@@ -139,6 +148,20 @@ export const ManageListingsPageComponent = props => {
       history.push(noAccessPagePath);
     }
   }, [openingListingError]);
+
+  useEffect(() => {
+    if (!deleteListingSuccessVisible) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDeleteListingSuccessVisible(false);
+    }, 3500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [deleteListingSuccessVisible]);
 
   const onToggleMenu = listing => {
     setListingMenuOpen(listing);
@@ -168,6 +191,22 @@ export const ManageListingsPageComponent = props => {
     setDiscardDraftModalId(null);
   };
 
+  const openDeleteListingModal = listingId => {
+    setDeleteListingModalId(listingId);
+    setDeleteListingModalOpen(true);
+  };
+
+  const handleDeleteListing = () => {
+    onDeleteListing(deleteListingModalId)
+      .then(() => {
+        setDeleteListingSuccessVisible(true);
+      })
+      .catch(() => null);
+
+    setDeleteListingModalOpen(false);
+    setDeleteListingModalId(null);
+  };
+
   const hasPaginationInfo = !!pagination && pagination.totalItems != null;
   const listingsAreLoaded = !queryInProgress && hasPaginationInfo;
 
@@ -189,7 +228,8 @@ export const ManageListingsPageComponent = props => {
 
   const closingErrorListingId = !!closingListingError && closingListingError.listingId;
   const openingErrorListingId = !!openingListingError && openingListingError.listingId;
-  const discardingErrorListingId = !!discardingDraftError && discardingDraft.listingId;
+  const discardingErrorListingId = !!discardingDraftError && discardingDraftError.listingId;
+  const deletingErrorListingId = !!deletingListingError && deletingListingError.listingId;
 
   const panelWidth = 62.5;
   // Render hints for responsive image
@@ -222,6 +262,15 @@ export const ManageListingsPageComponent = props => {
         {queryListingsError ? queryError : null}
 
         <div className={css.listingPanel}>
+          {deleteListingSuccessVisible ? (
+            <div className={css.successPanel} role="status" aria-live="polite">
+              <IconSuccess className={css.successIcon} />
+              <span className={css.successText}>
+                <FormattedMessage id="ManageListingsPage.deleteSuccess" />
+              </span>
+            </div>
+          ) : null}
+
           <Heading listingsAreLoaded={listingsAreLoaded} pagination={pagination} />
 
           <div className={css.listingCards}>
@@ -231,14 +280,19 @@ export const ManageListingsPageComponent = props => {
                 key={l.id.uuid}
                 listing={l}
                 isMenuOpen={!!listingMenuOpen && listingMenuOpen.id.uuid === l.id.uuid}
-                actionsInProgressListingId={openingListing || closingListing || discardingDraft}
+                actionsInProgressListingId={
+                  openingListing || closingListing || discardingDraft || deletingListing
+                }
                 onToggleMenu={onToggleMenu}
                 onCloseListing={onCloseListing}
                 onOpenListing={handleOpenListing}
                 onDiscardDraft={openDiscardDraftModal}
+                onDeleteListing={openDeleteListingModal}
+                showDeleteListingAction={!useSharetribeConsole}
                 hasOpeningError={openingErrorListingId.uuid === l.id.uuid}
                 hasClosingError={closingErrorListingId.uuid === l.id.uuid}
                 hasDiscardingError={discardingErrorListingId.uuid === l.id.uuid}
+                hasDeletingError={deletingErrorListingId.uuid === l.id.uuid}
                 renderSizes={renderSizes}
               />
             ))}
@@ -252,6 +306,19 @@ export const ManageListingsPageComponent = props => {
               onDiscardDraft={handleDiscardDraft}
               focusElementId={
                 discardDraftModalId ? `discardButton_${discardDraftModalId.uuid}` : null
+              }
+            />
+          ) : null}
+
+          {onManageDisableScrolling && deleteListingModalOpen ? (
+            <DeleteListingModal
+              id="ManageListingsPageDeleteListing"
+              isOpen={deleteListingModalOpen}
+              onManageDisableScrolling={onManageDisableScrolling}
+              onCloseModal={() => setDeleteListingModalOpen(false)}
+              onDeleteListing={handleDeleteListing}
+              focusElementId={
+                deleteListingModalId ? `deleteButton_${deleteListingModalId.uuid}` : null
               }
             />
           ) : null}
@@ -279,6 +346,8 @@ const mapStateToProps = state => {
     openingListingError,
     closingListing,
     closingListingError,
+    deletingListing,
+    deletingListingError,
     discardingDraft,
     discardingDraftError,
   } = state.ManageListingsPage;
@@ -296,6 +365,8 @@ const mapStateToProps = state => {
     openingListingError,
     closingListing,
     closingListingError,
+    deletingListing,
+    deletingListingError,
     discardingDraft,
     discardingDraftError,
   };
@@ -303,6 +374,7 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => ({
   onCloseListing: listingId => dispatch(closeListing(listingId)),
+  onDeleteListing: listingId => dispatch(deleteListing(listingId)),
   onOpenListing: listingId => dispatch(openListing(listingId)),
   onDiscardDraft: listingId => dispatch(discardDraft(listingId)),
   onManageDisableScrolling: (componentId, disableScrolling) =>

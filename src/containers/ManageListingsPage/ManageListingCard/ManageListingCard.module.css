@@ -368,6 +368,15 @@
   }
 }
 
+.manageLinkDelete {
+  composes: manageLink;
+  color: var(--colorFail);
+
+  &:hover {
+    color: var(--colorFail);
+  }
+}
+
 .manageLinksSeparator {
   margin: 0 3px 0 3px;
 }

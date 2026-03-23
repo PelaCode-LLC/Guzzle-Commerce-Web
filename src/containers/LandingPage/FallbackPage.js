@@ -1,21 +1,36 @@
 import React from 'react';
 import loadable from '@loadable/component';
+import { useIntl } from 'react-intl';
 
+import { useConfiguration } from '../../context/configurationContext';
+import { localCategoryCards } from '../../config/localCategories';
+import { NamedLink } from '../../components';
 import css from './FallbackPage.module.css';
 
 const PageBuilder = loadable(() =>
   import(/* webpackChunkName: "PageBuilder" */ '../PageBuilder/PageBuilder')
 );
 
+const CATEGORY_PARAM_NAME = 'pub_categoryLevel1';
+const fallbackCategories = localCategoryCards;
+
 // Create fallback content (array of sections) in page asset format:
-export const fallbackSections = error => ({
+export const fallbackSections = (error, categories) => ({
   sections: [
     {
-      sectionType: 'customMaintenance',
-      sectionId: 'maintenance-mode',
-      // pass possible error to SectionMaintenanceMode component
-      error,
+      sectionType: 'customCategories',
+      sectionId: 'landing-categories',
+      categories,
     },
+    ...(error && error?.status !== 404
+      ? [
+          {
+            sectionType: 'customMaintenance',
+            sectionId: 'maintenance-mode',
+            error,
+          },
+        ]
+      : []),
   ],
   meta: {
     pageTitle: {
@@ -33,28 +48,52 @@ export const fallbackSections = error => ({
 //       It needs to be something that is not part of fetched assets but built-in text
 const SectionMaintenanceMode = props => {
   const { sectionId, error } = props;
-  // 404 means that the landing-page asset was not found from the expected asset path
-  // which is defined in config.js
-  const is404 = error?.status === 404;
+  const intl = useIntl();
+
+  return (
+    <section id={sectionId} className={css.errorSection}>
+      <div className={css.errorContent}>
+        <h2>{intl.formatMessage({ id: 'LandingPage.localHome.errorTitle' })}</h2>
+        <p>{error?.message || intl.formatMessage({ id: 'LandingPage.localHome.errorDescription' })}</p>
+      </div>
+    </section>
+  );
+};
+
+const SectionCategoryLinks = props => {
+  const { sectionId, categories = [] } = props;
+  const intl = useIntl();
+
+  const categoryCards = categories.length > 0 ? categories : fallbackCategories;
 
   return (
     <section id={sectionId} className={css.root}>
-      {is404 ? (
-        <div className={css.content}>
-          <h2>Oops, something went wrong!</h2>
-          <p>
-            The marketplace is not fully operational at the moment.
-            <br />
-            Try refreshing the page and if that does not solve the issue, contact the marketplace
-            admins.
-          </p>
+      <div className={css.content}>
+        <h1 className={css.title}>{intl.formatMessage({ id: 'LandingPage.localHome.title' })}</h1>
+        <p className={css.subtitle}>
+          {intl.formatMessage({ id: 'LandingPage.localHome.subtitle' })}
+        </p>
+        <div className={css.categoryGrid}>
+          {categoryCards.map(category => {
+            const search = `?${CATEGORY_PARAM_NAME}=${encodeURIComponent(category.id)}`;
+            const categoryName = category.name || category.label || category.id;
+
+            return (
+              <NamedLink
+                key={category.id}
+                name="SearchPage"
+                to={{ search }}
+                className={css.categoryCard}
+              >
+                <span className={css.categoryName}>{categoryName}</span>
+                <span className={css.categoryAction}>
+                  {intl.formatMessage({ id: 'LandingPage.localHome.browse' })}
+                </span>
+              </NamedLink>
+            );
+          })}
         </div>
-      ) : (
-        <div className={css.content}>
-          <h2>Oops, something went wrong!</h2>
-          <p>{error?.message}</p>
-        </div>
-      )}
+      </div>
     </section>
   );
 };
@@ -62,12 +101,16 @@ const SectionMaintenanceMode = props => {
 // This is the fallback page, in case there's no Landing Page asset defined in Console.
 const FallbackPage = props => {
   const { error, ...rest } = props;
+  const config = useConfiguration();
+  const categories = config?.categoryConfiguration?.categories || [];
+
   return (
     <PageBuilder
-      pageAssetsData={fallbackSections(error)}
+      pageAssetsData={fallbackSections(error, categories)}
       options={{
         sectionComponents: {
           customMaintenance: { component: SectionMaintenanceMode },
+          customCategories: { component: SectionCategoryLinks },
         },
       }}
       {...rest}

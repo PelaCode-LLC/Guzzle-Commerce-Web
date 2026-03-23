@@ -1,11 +1,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 import { types as sdkTypes, createImageVariantConfig } from '../../util/sdkLoader';
+import appSettings from '../../config/settings';
 import { storableError } from '../../util/errors';
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
 import { transactionLineItems } from '../../util/api';
 import * as log from '../../util/log';
 import { denormalisedResponseEntities } from '../../util/data';
+import {
+  fetchListingByIdBackend,
+  toBackendIdFromUuid,
+  toSdkOwnListingResponse,
+  toSdkSingleListingResponse,
+  toUuidFromBackendId,
+} from '../../util/backend';
 import {
   bookingTimeUnits,
   findNextBoundary,
@@ -51,6 +59,7 @@ const removeOutdatedDateData = timeSlotsForDate => {
 //////////////////
 const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAPI) => {
   const { dispatch, rejectWithValue, extra: sdk } = thunkAPI;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const {
     aspectWidth = 1,
     aspectHeight = 1,
@@ -95,6 +104,17 @@ const showListingPayloadCreator = ({ listingId, config, isOwn = false }, thunkAP
     ...createImageVariantConfig(`${variantPrefix}-6x`, 2400, aspectRatio),
   };
 
+  if (!useSharetribeConsole || !sdk || !sdk.listings) {
+    const backendId = toBackendIdFromUuid(listingId?.uuid || listingId);
+    return fetchListingByIdBackend(backendId)
+      .then(data => {
+        const response = isOwn ? toSdkOwnListingResponse(data) : toSdkSingleListingResponse(data);
+        dispatch(addMarketplaceEntities(response, {}));
+        return response;
+      })
+      .catch(e => rejectWithValue(storableError(e)));
+  }
+
   const show = isOwn ? sdk.ownListings.show(params) : sdk.listings.show(params);
 
   return show
@@ -124,6 +144,11 @@ export const showListing = (listingId, config, isOwn = false) => (dispatch, getS
 export const fetchReviewsThunk = createAsyncThunk(
   'ListingPage/fetchReviews',
   ({ listingId }, { rejectWithValue, extra: sdk }) => {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+    if (!useSharetribeConsole || !sdk || !sdk.reviews) {
+      return Promise.resolve([]);
+    }
+
     return sdk.reviews
       .query({
         listing_id: listingId,
@@ -416,7 +441,8 @@ const listingPageSlice = createSlice({
         // Data is handled by addMarketplaceEntities in the thunk
       })
       .addCase(showListingThunk.rejected, (state, action) => {
-        state.showListingError = action.payload;
+        state.showListingError =
+          action.payload || storableError(action.error || { message: 'Failed to load listing' });
       })
       .addCase(fetchReviewsThunk.pending, state => {
         state.fetchReviewsError = null;
@@ -525,7 +551,11 @@ export default listingPageSlice.reducer;
 // ================ Load data ================ //
 
 export const loadData = (params, search, config) => (dispatch, getState, sdk) => {
-  const listingId = new UUID(params.id);
+  const normalizedId =
+    !appSettings.useSharetribeConsole && !String(params.id || '').includes('-')
+      ? toUuidFromBackendId(params.id)
+      : params.id;
+  const listingId = new UUID(normalizedId);
   const state = getState();
   const currentUser = state.user?.currentUser;
   const inquiryModalOpenForListingId =

@@ -1,4 +1,5 @@
 import { subUnitDivisors } from '../config/settingsCurrency';
+import { localCategories } from '../config/localCategories';
 import { getSupportedProcessesInfo, isBookingProcessAlias } from '../transactions/transaction';
 
 // Generic helpers for validating config values
@@ -258,8 +259,8 @@ const mergeBranding = (brandingConfig, defaultBranding) => {
     colorPrimaryButtonDark,
     colorPrimaryButtonLight,
     logoSettings: validLogoSettings ? logoSettingsRaw : { format: 'image', height: 24 },
-    logoImageDesktop: logo || defaultBranding.logoImageDesktopURL,
-    logoImageMobile: logo || defaultBranding.logoImageMobileURL,
+    logoImageDesktop: defaultBranding.logoImageDesktopURL || logo,
+    logoImageMobile: defaultBranding.logoImageMobileURL || logo,
     brandImage: loginBackgroundImage,
     facebookImage,
     twitterImage,
@@ -1256,9 +1257,11 @@ const mergeListingConfig = (hostedConfig, defaultConfigs, categoriesInUse) => {
   const { listingTypes: defaultListingTypes, listingFields: defaultListingFields, ...rest } =
     defaultConfigs.listing || {};
 
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
   // When debugging, include default configs by passing 'true' here.
   // Otherwise, use listing types and fields from hosted assets.
-  const shouldMerge = mergeDefaultTypesAndFieldsForDebugging(false);
+  const shouldMerge = !useSharetribeConsole || mergeDefaultTypesAndFieldsForDebugging(false);
   const listingTypes = shouldMerge
     ? union(hostedListingTypes, defaultListingTypes, 'listingType')
     : hostedListingTypes;
@@ -1282,9 +1285,11 @@ const mergeUserConfig = (hostedConfig, defaultConfigs) => {
 
   const { userFields: defaultUserFields, userTypes: defaultUserTypes } = defaultConfigs.user;
 
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
   // When debugging, include default configs by passing 'true' here.
   // Otherwise, use user fields from hosted assets.
-  const shouldMerge = mergeDefaultTypesAndFieldsForDebugging(false);
+  const shouldMerge = !useSharetribeConsole || mergeDefaultTypesAndFieldsForDebugging(false);
   const userTypes = shouldMerge
     ? union(hostedUserTypes, defaultUserTypes, 'userType')
     : hostedUserTypes;
@@ -1544,6 +1549,11 @@ const mergeMapConfig = (hostedMapConfig, defaultMapConfig) => {
 
 // Check if all the mandatory info have been retrieved from hosted assets
 const hasMandatoryConfigs = hostedConfig => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+  if (!useSharetribeConsole) {
+    return true;
+  }
+
   const { branding, listingTypes, listingFields, transactionSize } = hostedConfig;
   printErrorIfHostedAssetIsMissing({ branding, listingTypes, listingFields, transactionSize });
   return (
@@ -1572,12 +1582,14 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     defaultConfigs.listingMinimumPriceSubUnits;
 
   const validHostedCategories = validateCategoryConfig(configAsset.categories);
-  const categoryConfiguration = getBuiltInCategorySpecs(validHostedCategories);
+  const categoriesConfig = validHostedCategories?.length > 0 ? validHostedCategories : localCategories;
   const listingConfiguration = mergeListingConfig(
     configAsset,
     defaultConfigs,
-    validHostedCategories
+    categoriesConfig
   );
+
+  const normalizedCategoryConfiguration = getBuiltInCategorySpecs(categoriesConfig);
 
   return {
     // Use default configs as a starting point for app config.
@@ -1616,7 +1628,7 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     user: mergeUserConfig(configAsset, defaultConfigs),
 
     // Set category configuration (includes fixed key, array of categories etc.
-    categoryConfiguration,
+    categoryConfiguration: normalizedCategoryConfiguration,
 
     // Listing configuration comes entirely from hosted assets by default.
     listing: listingConfiguration,
@@ -1625,7 +1637,7 @@ export const mergeConfig = (configAsset = {}, defaultConfigs = {}) => {
     search: mergeSearchConfig(
       configAsset.search,
       defaultConfigs.search,
-      categoryConfiguration,
+      normalizedCategoryConfiguration,
       listingConfiguration.listingTypes
     ),
 

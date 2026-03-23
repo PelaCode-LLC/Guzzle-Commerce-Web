@@ -1,0 +1,86 @@
+################################################################################
+# Render Blueprint – Guzzle Commerce
+#
+# Deploys:
+#   - backend  – Node.js API (Render Web Service)
+#   - db       – Managed PostgreSQL (Render Postgres)
+#
+# Usage:
+#   Push this file to your repo root, then in the Render Dashboard:
+#   New → Blueprint → connect repo → Render reads this file.
+#
+# Secrets that MUST be set manually in the Render Dashboard after first deploy
+# (do not commit real values here):
+#   JWT_SECRET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+#   R2_BUCKET, R2_PUBLIC_URL, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY
+################################################################################
+
+services:
+  - type: web
+    name: guzzle-commerce-backend
+    runtime: node
+    region: oregon  # Change to closest region: oregon | frankfurt | singapore | ohio
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render injects PORT automatically; default 5000 is the fallback.
+      - key: PORT
+        value: 5000
+
+      # Render Postgres – fromDatabase wires the DATABASE_URL automatically.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: guzzle-commerce-db
+          property: connectionString
+
+      - key: DATABASE_SSL_MODE
+        value: require
+
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: false
+
+      # ── Secrets – set these in the Render Dashboard, not here ──
+      - key: JWT_SECRET
+        sync: false
+
+      - key: R2_ACCOUNT_ID
+        sync: false
+
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+
+      - key: R2_BUCKET
+        sync: false
+
+      - key: R2_PUBLIC_URL
+        sync: false
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+
+      # ── CORS – update to your actual frontend domain ──
+      - key: FRONTEND_URL
+        value: https://app.yourdomain.com
+
+      - key: FRONTEND_URLS
+        value: https://app.yourdomain.com,https://www.yourdomain.com
+
+databases:
+  - name: guzzle-commerce-db
+    region: oregon   # Must match the web service region above
+    plan: free       # Upgrade to starter or above for production persistence
+    databaseName: marketplace
+    user: marketplace_user

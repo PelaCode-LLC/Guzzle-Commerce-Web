@@ -3,6 +3,12 @@ import { updatedEntities, denormalisedEntities } from '../../util/data';
 import { storableError } from '../../util/errors';
 import { createImageVariantConfig } from '../../util/sdkLoader';
 import { parse } from '../../util/urlHelpers';
+import {
+  searchOwnListingsBackend,
+  toSdkOwnListingsQueryResponse,
+  toBackendIdFromUuid,
+  deleteListingBackend,
+} from '../../util/backend';
 
 import { fetchCurrentUser } from '../../ducks/user.duck';
 
@@ -35,8 +41,30 @@ export const getOwnListingsById = (state, listingIds) => {
 // Query Own Listings //
 ////////////////////////
 const queryOwnListingsPayloadCreator = (queryParams, { extra: sdk, dispatch, rejectWithValue }) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const { perPage, ...rest } = queryParams;
   const params = { ...rest, perPage };
+
+  if (!useSharetribeConsole) {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+    const page = Number(queryParams?.page || 1);
+    const limit = Number(perPage || RESULT_PAGE_SIZE);
+    const offset = Math.max(0, (page - 1) * limit);
+
+    if (!token) {
+      return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+    }
+
+    return searchOwnListingsBackend(token, { limit, offset })
+      .then(payload => {
+        const response = toSdkOwnListingsQueryResponse(payload, page, limit);
+        dispatch(addOwnEntities(response));
+        return response;
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
 
   return sdk.ownListings
     .query(params)
@@ -135,6 +163,52 @@ export const discardDraft = listingId => (dispatch, getState, sdk) => {
   return dispatch(discardDraftThunk(listingId)).unwrap();
 };
 
+////////////////////
+// Delete Listing //
+////////////////////
+const deleteListingPayloadCreator = (listingId, thunkAPI) => {
+  const { getState, dispatch, rejectWithValue } = thunkAPI;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+  const { queryParams } = getState().ManageListingsPage;
+
+  if (useSharetribeConsole) {
+    return rejectWithValue(
+      storableError({ error: 'Deleting listings is not supported in Sharetribe Console mode.' })
+    );
+  }
+
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+  const backendListingId = toBackendIdFromUuid(listingId?.uuid || listingId);
+
+  if (!token) {
+    return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+  }
+
+  const page = Number(queryParams?.page || 1);
+  const limit = Number(queryParams?.perPage || RESULT_PAGE_SIZE);
+  const offset = Math.max(0, (page - 1) * limit);
+
+  return deleteListingBackend(token, backendListingId)
+    .then(() => searchOwnListingsBackend(token, { limit, offset }))
+    .then(payload => {
+      const response = toSdkOwnListingsQueryResponse(payload, page, limit);
+      dispatch(addOwnEntities(response));
+      return response;
+    })
+    .catch(e => {
+      return rejectWithValue(storableError(e));
+    });
+};
+
+export const deleteListingThunk = createAsyncThunk(
+  'app/ManageListingsPage/deleteListing',
+  deleteListingPayloadCreator
+);
+
+export const deleteListing = listingId => (dispatch, getState, sdk) => {
+  return dispatch(deleteListingThunk(listingId)).unwrap();
+};
+
 // ================ Slice ================ //
 
 const resultIds = data => data.data.map(l => l.id);
@@ -167,6 +241,8 @@ const manageListingsPageSlice = createSlice({
     closingListingError: null,
     discardingDraft: null,
     discardingDraftError: null,
+    deletingListing: null,
+    deletingListingError: null,
   },
   reducers: {
     clearOpenListingError: state => {
@@ -266,6 +342,27 @@ const manageListingsPageSlice = createSlice({
         };
         state.discardingDraft = null;
       });
+
+    // Delete listing
+    builder
+      .addCase(deleteListingThunk.pending, (state, action) => {
+        state.deletingListing = action.meta.arg;
+        state.deletingListingError = null;
+      })
+      .addCase(deleteListingThunk.fulfilled, (state, action) => {
+        state.currentPageResultIds = resultIds(action.payload.data);
+        state.pagination = action.payload.data.meta;
+        state.deletingListing = null;
+      })
+      .addCase(deleteListingThunk.rejected, (state, action) => {
+        // eslint-disable-next-line no-console
+        console.error(action.payload || action.error);
+        state.deletingListingError = {
+          listingId: state.deletingListing,
+          error: action.payload,
+        };
+        state.deletingListing = null;
+      });
   },
 });
 
@@ -275,6 +372,7 @@ export default manageListingsPageSlice.reducer;
 // ================ Load data ================ //
 
 export const loadData = (params, search, config) => (dispatch, getState, sdk) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const queryParams = parse(search);
   const page = queryParams.page || 1;
   dispatch(clearOpenListingError());
@@ -286,23 +384,32 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   } = config.layout.listingImage;
   const aspectRatio = aspectHeight / aspectWidth;
 
-  return Promise.all([
-    dispatch(fetchCurrentUser()),
-    dispatch(
-      queryOwnListings({
-        ...queryParams,
-        page,
-        perPage: RESULT_PAGE_SIZE,
-        include: ['images', 'currentStock'],
-        'fields.image': [`variants.${variantPrefix}`, `variants.${variantPrefix}-2x`],
-        ...createImageVariantConfig(`${variantPrefix}`, 400, aspectRatio),
-        ...createImageVariantConfig(`${variantPrefix}-2x`, 800, aspectRatio),
-        'limit.images': 1,
-      })
-    ),
-  ])
+  const listingsQuery = queryOwnListings({
+    ...queryParams,
+    page,
+    perPage: RESULT_PAGE_SIZE,
+    include: ['images', 'currentStock'],
+    'fields.image': [`variants.${variantPrefix}`, `variants.${variantPrefix}-2x`],
+    ...createImageVariantConfig(`${variantPrefix}`, 400, aspectRatio),
+    ...createImageVariantConfig(`${variantPrefix}-2x`, 800, aspectRatio),
+    'limit.images': 1,
+  });
+
+  if (!useSharetribeConsole) {
+    return Promise.allSettled([dispatch(fetchCurrentUser()), dispatch(listingsQuery)]).then(
+      results => {
+        const listingsResult = results[1];
+        if (listingsResult.status === 'rejected') {
+          throw listingsResult.reason;
+        }
+        const ownListings = listingsResult.value?.data?.data;
+        return ownListings;
+      }
+    );
+  }
+
+  return Promise.all([dispatch(fetchCurrentUser()), dispatch(listingsQuery)])
     .then(response => {
-      // const currentUser = response[0]?.data?.data;
       const ownListings = response[1]?.data?.data;
       return ownListings;
     })

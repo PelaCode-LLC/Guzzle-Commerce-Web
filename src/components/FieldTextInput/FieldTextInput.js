@@ -29,16 +29,16 @@ const FieldTextInputComponent = props => {
     throw new Error('id required when a label is given');
   }
 
-  const { valid, invalid, touched, error } = meta;
+  const { valid, invalid, touched, submitFailed, error } = meta;
   const isTextarea = input.type === 'textarea';
 
   const errorText = customErrorText || error;
 
   // Error message and input error styles are only shown if the
   // field has been touched and the validation has failed.
-  const hasError = !!customErrorText || !!(touched && invalid && error);
+  const hasError = !!customErrorText || !!((touched || submitFailed) && invalid && error);
 
-  const fieldMeta = { touched: hasError, error: errorText };
+  const fieldMeta = { touched: hasError, submitFailed, error: errorText };
 
   // Textarea doesn't need type.
   const { type, ...inputWithoutType } = input;

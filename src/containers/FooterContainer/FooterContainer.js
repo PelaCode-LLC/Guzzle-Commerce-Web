@@ -1,4 +1,5 @@
 import React from 'react';
+import { FormattedMessage } from '../../util/reactIntl';
 import { useConfiguration } from '../../context/configurationContext';
 import loadable from '@loadable/component';
 
@@ -10,11 +11,21 @@ const SectionBuilder = loadable(
 );
 
 const FooterComponent = () => {
-  const { footer = {}, topbar } = useConfiguration();
+  const { footer = {}, topbar, marketplaceName } = useConfiguration();
 
-  // If footer asset is not set, let's not render Footer at all.
+  // If footer asset is not set, show a local fallback footer.
   if (Object.keys(footer).length === 0) {
-    return null;
+    return (
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '20px 24px 28px',
+        }}
+      >
+        <div style={{ marginBottom: '6px' }}>{marketplaceName}</div>
+        <FormattedMessage id="FooterContainer.slogan" />
+      </div>
+    );
   }
 
   // The footer asset does not specify sectionId or sectionType. However, the SectionBuilder
@@ -27,7 +38,19 @@ const FooterComponent = () => {
     linkLogoToExternalSite: topbar?.logoLink,
   };
 
-  return <SectionBuilder sections={[footerSection]} />;
+  return (
+    <>
+      <SectionBuilder sections={[footerSection]} />
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '12px 24px 24px',
+        }}
+      >
+        <FormattedMessage id="FooterContainer.slogan" />
+      </div>
+    </>
+  );
 };
 
 // NOTE: if you want to add dynamic data to FooterComponent,

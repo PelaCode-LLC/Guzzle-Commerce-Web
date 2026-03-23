@@ -3,13 +3,19 @@ import classNames from 'classnames';
 
 import { useConfiguration } from '../../context/configurationContext';
 import { ResponsiveImage } from '../../components/';
+import {
+  logoImageDesktopURL as localLogoImageDesktop,
+  logoImageMobileURL as localLogoImageMobile,
+  logoSettings as localLogoSettings,
+} from '../../config/configBranding';
 
 import css from './Logo.module.css';
 
 const HEIGHT_24 = 24;
 const HEIGHT_36 = 36;
 const HEIGHT_48 = 48;
-const HEIGHT_OPTIONS = [HEIGHT_24, HEIGHT_36, HEIGHT_48];
+const HEIGHT_56 = 56;
+const HEIGHT_OPTIONS = [HEIGHT_24, HEIGHT_36, HEIGHT_48, HEIGHT_56];
 
 // logoSettings property supports only 3 types at this point
 const isValidLogoSettings = settings =>
@@ -31,7 +37,13 @@ const getVariantData = variants => {
 
 // We have maximum heights for each logo type. It's enforced through classes
 const getHeightClassName = height => {
-  return height === HEIGHT_48 ? css.logo48 : height === HEIGHT_36 ? css.logo36 : css.logo24;
+  return height === HEIGHT_56
+    ? css.logo56
+    : height === HEIGHT_48
+    ? css.logo48
+    : height === HEIGHT_36
+    ? css.logo36
+    : css.logo24;
 };
 
 export const LogoComponent = props => {
@@ -125,14 +137,17 @@ const Logo = props => {
   const { layout = 'desktop', ...rest } = props;
   // NOTE: logo images are set in hosted branding.json asset or src/config/brandingConfig.js
   const { logoImageDesktop, logoImageMobile, logoSettings } = config.branding;
+  const resolvedLogoDesktop = localLogoImageDesktop || logoImageDesktop;
+  const resolvedLogoMobile = localLogoImageMobile || logoImageMobile;
+  const resolvedLogoSettings = localLogoSettings || logoSettings;
 
   return (
     <LogoComponent
       {...rest}
       layout={layout}
-      logoImageDesktop={logoImageDesktop}
-      logoImageMobile={logoImageMobile}
-      logoSettings={logoSettings}
+      logoImageDesktop={resolvedLogoDesktop}
+      logoImageMobile={resolvedLogoMobile}
+      logoSettings={resolvedLogoSettings}
       marketplaceName={config.marketplaceName}
     />
   );

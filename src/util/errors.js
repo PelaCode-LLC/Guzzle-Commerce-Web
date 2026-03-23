@@ -72,7 +72,13 @@ export const isTooManyRequestsError = error => error?.status === 429;
  * Check if the given API error (from `sdk.currentuser.create()`) is
  * due to the email address already being in use.
  */
-export const isSignupEmailTakenError = error => hasErrorWithCode(error, ERROR_CODE_EMAIL_TAKEN);
+export const isSignupEmailTakenError = error => {
+  const sdkEmailTaken = hasErrorWithCode(error, ERROR_CODE_EMAIL_TAKEN);
+  const backendMessage = `${error?.message || ''} ${error?.error || ''}`.toLowerCase();
+  const backendEmailTaken = error?.status === 409 && backendMessage.includes('email already');
+
+  return sdkEmailTaken || backendEmailTaken;
+};
 
 /**
  * Check if the given API error (from `sdk.currentuser.changeEmail()`) is

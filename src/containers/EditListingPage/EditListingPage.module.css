@@ -34,3 +34,8 @@
 .wizard {
   flex-grow: 1;
 }
+
+.error {
+  margin: 24px;
+  color: var(--colorFail);
+}

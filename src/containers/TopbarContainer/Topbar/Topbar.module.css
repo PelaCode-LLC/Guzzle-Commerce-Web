@@ -97,6 +97,31 @@
   }
 }
 
+.themeToggle {
+  composes: h5 from global;
+  color: var(--colorGrey700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  background-color: transparent;
+
+  &:enabled:hover,
+  &:enabled:active {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.themeToggleLabel {
+  composes: textSmall from global;
+  color: inherit;
+  white-space: nowrap;
+}
+
 .menu {
   padding: 15px 24px;
   position: relative;

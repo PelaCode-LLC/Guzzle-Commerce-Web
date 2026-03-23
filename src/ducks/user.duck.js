@@ -13,6 +13,9 @@ import {
 import { authInfo } from './auth.duck';
 import { updateStripeConnectAccount } from './stripeConnectAccount.duck';
 
+// new backend helper
+import { fetchMe, toSdkCurrentUser } from '../util/backend';
+
 // ================ Helper Functions ================ //
 
 const mergeCurrentUser = (oldCurrentUser, newCurrentUser) => {
@@ -154,7 +157,7 @@ export const fetchCurrentUserNotifications = () => (dispatch, getState, sdk) => 
   return dispatch(fetchCurrentUserNotificationsThunk()).unwrap();
 };
 
-const fetchCurrentUserPayloadCreator = (options, thunkAPI) => {
+const fetchCurrentUserPayloadCreator = (options = {}, thunkAPI) => {
   const { getState, dispatch, extra: sdk, rejectWithValue } = thunkAPI;
   const state = getState();
   const { currentUserHasListings, currentUserShowTimestamp } = state.user || {};
@@ -165,6 +168,7 @@ const fetchCurrentUserPayloadCreator = (options, thunkAPI) => {
     updateNotifications = true,
     afterLogin,
     enforce = false, // Automatic emailVerification might be called too fast
+    token,
   } = options || {};
 
   // Double fetch might happen when e.g. profile page is making a full page load
@@ -178,6 +182,29 @@ const fetchCurrentUserPayloadCreator = (options, thunkAPI) => {
     return Promise.resolve(null);
   }
 
+  // if token or backend is used, call our backend endpoint
+  if (token || localStorage.getItem('jwt')) {
+    const authToken = token || localStorage.getItem('jwt');
+    return fetchMe(authToken)
+      .then(user => {
+        const currentUser = toSdkCurrentUser(user);
+        // no extra processing for listings/notifications yet
+        log.setUserId(currentUser.id?.uuid || currentUser.id);
+        if (sdk && typeof sdk.authInfo === 'function') {
+          dispatch(authInfo());
+        }
+        return currentUser;
+      })
+      .catch(e => {
+        // Remove invalid/expired JWT so authInfo() correctly reports unauthenticated
+        localStorage.removeItem('jwt');
+        dispatch(authInfo());
+        log.error(e, 'fetch-current-user-backend-failed');
+        return rejectWithValue(storableError(e));
+      });
+  }
+
+  // default fallback to sdk behaviour
   const parameters = callParams || {
     include: ['effectivePermissionSet', 'profileImage', 'stripeAccount'],
     'fields.image': [

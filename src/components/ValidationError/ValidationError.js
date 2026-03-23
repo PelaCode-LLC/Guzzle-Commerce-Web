@@ -20,9 +20,9 @@ import css from './ValidationError.module.css';
  */
 const ValidationError = props => {
   const { rootClassName, className, fieldMeta } = props;
-  const { touched, error } = fieldMeta;
+  const { touched, submitFailed, error } = fieldMeta;
   const classes = classNames(rootClassName || css.root, className);
-  return touched && error ? <div className={classes}>{error}</div> : null;
+  return (touched || submitFailed) && error ? <div className={classes}>{error}</div> : null;
 };
 
 export default ValidationError;

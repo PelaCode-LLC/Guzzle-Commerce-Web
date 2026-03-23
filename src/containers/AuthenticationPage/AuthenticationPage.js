@@ -166,6 +166,7 @@ export const AuthenticationForms = props => {
     signupError,
     authInProgress,
     submitSignup,
+    onSignupSuccess,
     termsAndConditions,
   } = props;
   const config = useConfiguration();
@@ -208,6 +209,7 @@ export const AuthenticationForms = props => {
   const handleSubmitSignup = values => {
     const { userType, email, password, fname, lname, displayName, ...rest } = values;
     const displayNameMaybe = displayName ? { displayName: displayName.trim() } : {};
+    const userTypeMaybe = userType ? { userType } : {};
 
     const params = {
       email,
@@ -216,7 +218,7 @@ export const AuthenticationForms = props => {
       lastName: lname.trim(),
       ...displayNameMaybe,
       publicData: {
-        userType,
+        ...userTypeMaybe,
         ...pickUserFieldsData(rest, 'public', userType, userFields),
       },
       privateData: {
@@ -228,12 +230,24 @@ export const AuthenticationForms = props => {
       },
     };
 
-    submitSignup(params);
+    return submitSignup(params).then(() => {
+      if (typeof onSignupSuccess === 'function') {
+        onSignupSuccess();
+      }
+    });
   };
 
+  const isInvalidCredentialsError = /invalid email or password/i.test(loginError?.message || '');
   const loginErrorMessage = (
     <div className={css.error}>
-      <FormattedMessage id="AuthenticationPage.loginFailed" />
+      {isInvalidCredentialsError ? (
+        <FormattedMessage id="AuthenticationPage.loginFailed" />
+      ) : (
+        <>
+          <FormattedMessage id="AuthenticationPage.loginFailed" />
+          {loginError?.message ? <span>{` ${loginError.message}`}</span> : null}
+        </>
+      )}
     </div>
   );
 
@@ -248,7 +262,10 @@ export const AuthenticationForms = props => {
       {isSignupEmailTakenError(signupError) ? (
         <FormattedMessage id="AuthenticationPage.signupFailedEmailAlreadyTaken" />
       ) : (
-        <FormattedMessage id="AuthenticationPage.signupFailed" />
+        <>
+          <FormattedMessage id="AuthenticationPage.signupFailed" />
+          {signupError?.message ? <span>{` ${signupError.message}`}</span> : null}
+        </>
       )}
     </div>
   );
@@ -324,6 +341,7 @@ const ConfirmIdProviderInfoForm = props => {
       displayName,
       ...rest
     } = values;
+    const userTypeMaybe = userType ? { userType } : {};
 
     const displayNameMaybe = displayName ? { displayName: displayName.trim() } : {};
 
@@ -340,7 +358,7 @@ const ConfirmIdProviderInfoForm = props => {
     const extendedDataMaybe = !isEmpty(rest)
       ? {
           publicData: {
-            userType,
+            ...userTypeMaybe,
             ...pickUserFieldsData(rest, 'public', userType, userFields),
           },
           privateData: {
@@ -415,6 +433,7 @@ export const AuthenticationOrConfirmInfoForm = props => {
     signupError,
     confirmError,
     termsAndConditions,
+    onSignupSuccess,
   } = props;
   const isConfirm = tab === 'confirm';
   const isLogin = tab === 'login';
@@ -441,6 +460,7 @@ export const AuthenticationOrConfirmInfoForm = props => {
       submitLogin={submitLogin}
       authInProgress={authInProgress}
       submitSignup={submitSignup}
+      onSignupSuccess={onSignupSuccess}
       termsAndConditions={termsAndConditions}
     ></AuthenticationForms>
   );
@@ -520,6 +540,7 @@ export const AuthenticationPageComponent = props => {
   const [mounted, setMounted] = useState(false);
 
   const config = useConfiguration();
+  const routeConfiguration = useRouteConfiguration();
   const intl = useIntl();
 
   useEffect(() => {
@@ -541,6 +562,7 @@ export const AuthenticationPageComponent = props => {
     currentUser,
     isAuthenticated,
     location,
+    history,
     params: pathParams,
     loginError,
     scrollingDisabled,
@@ -634,6 +656,11 @@ export const AuthenticationPageComponent = props => {
     </p>
   ) : null;
 
+  const handleSignupSuccess = () => {
+    const landingPagePath = pathByRouteName('LandingPage', routeConfiguration);
+    history.push(landingPagePath, { signupSuccess: true });
+  };
+
   return (
     <Page
       title={schemaTitle}
@@ -682,6 +709,7 @@ export const AuthenticationPageComponent = props => {
               idpAuthError={authError}
               signupError={signupError}
               confirmError={confirmError}
+              onSignupSuccess={handleSignupSuccess}
               termsAndConditions={
                 <TermsAndConditions
                   onOpenTermsOfService={() => setTosModalOpen(true)}

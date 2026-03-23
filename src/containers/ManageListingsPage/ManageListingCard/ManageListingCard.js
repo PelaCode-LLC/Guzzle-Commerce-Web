@@ -295,53 +295,6 @@ const ShowOutOfStockOverlayMaybe = props => {
   ) : null;
 };
 
-const LinkToStockOrAvailabilityTab = props => {
-  const {
-    id,
-    slug,
-    title,
-    editListingLinkType,
-    isBookable,
-    hasListingType,
-    hasStockManagementInUse,
-    currentStock,
-    intl,
-  } = props;
-
-  if (!hasListingType || !(isBookable || hasStockManagementInUse)) {
-    return null;
-  }
-
-  return (
-    <>
-      <span className={css.manageLinksSeparator}>{' • '}</span>
-
-      {isBookable ? (
-        <NamedLink
-          className={css.manageLink}
-          name="EditListingPage"
-          params={{ id, slug, type: editListingLinkType, tab: 'availability' }}
-          ariaLabel={`${intl.formatMessage({
-            id: 'ManageListingCard.manageAvailability',
-          })}: ${title}`}
-        >
-          <FormattedMessage id="ManageListingCard.manageAvailability" />
-        </NamedLink>
-      ) : (
-        <NamedLink
-          className={css.manageLink}
-          name="EditListingPage"
-          params={{ id, slug, type: editListingLinkType, tab: 'pricing-and-stock' }}
-        >
-          {currentStock == null
-            ? intl.formatMessage({ id: 'ManageListingCard.setPriceAndStock' })
-            : intl.formatMessage({ id: 'ManageListingCard.manageStock' }, { currentStock })}
-        </NamedLink>
-      )}
-    </>
-  );
-};
-
 const PriceMaybe = props => {
   const { price, publicData, config, intl, foundListingTypeConfig } = props;
 
@@ -395,6 +348,7 @@ const PriceMaybe = props => {
  * @param {string} [props.className] - Custom class that extends the default class for the root element
  * @param {string} [props.rootClassName] - Custom class that overrides the default class for the root element
  * @param {boolean} props.hasClosingError - Whether the closing error is present
+ * @param {boolean} props.hasDeletingError - Whether the deleting error is present
  * @param {boolean} props.hasDiscardingError - Whether the discarding error is present
  * @param {boolean} props.hasOpeningError - Whether the opening error is present
  * @param {boolean} props.isMenuOpen - Whether the menu is open
@@ -402,9 +356,11 @@ const PriceMaybe = props => {
  * @param {propTypes.uuid} [props.actionsInProgressListingId.uuid] - The uuid of the listing
  * @param {propTypes.ownListing} props.listing - The listing
  * @param {function} props.onCloseListing - The function to close the listing
+ * @param {function} props.onDeleteListing - The function to delete the listing
  * @param {function} props.onOpenListing - The function to open the listing
  * @param {function} props.onDiscardDraft - The function to discard the draft
  * @param {function} props.onToggleMenu - The function to toggle the menu
+ * @param {boolean} [props.showDeleteListingAction] - Whether to show delete listing action in the menu
  * @param {string} [props.renderSizes] - The render sizes
  * @returns {JSX.Element} Manage listing card component
  */
@@ -417,18 +373,22 @@ export const ManageListingCard = props => {
     className,
     rootClassName,
     hasClosingError,
+    hasDeletingError,
     hasDiscardingError,
     hasOpeningError,
     isMenuOpen,
     actionsInProgressListingId,
     listing,
     onCloseListing,
+    onDeleteListing,
     onOpenListing,
     onDiscardDraft,
     onToggleMenu,
+    showDeleteListingAction,
     renderSizes,
   } = props;
   const classes = classNames(rootClassName || css.root, className);
+  const showDeleteAction = showDeleteListingAction !== false;
   const currentListing = ensureOwnListing(listing);
   const id = currentListing.id.uuid;
   const { title = '', price, state, publicData } = currentListing.attributes;
@@ -460,7 +420,7 @@ export const ManageListingCard = props => {
     [css.menuItemDisabled]: !!actionsInProgressListingId,
   });
 
-  const hasError = hasOpeningError || hasClosingError || hasDiscardingError;
+  const hasError = hasOpeningError || hasClosingError || hasDiscardingError || hasDeletingError;
   const thisListingInProgress =
     actionsInProgressListingId && actionsInProgressListingId.uuid === id;
 
@@ -567,6 +527,7 @@ export const ManageListingCard = props => {
                     <FormattedMessage id="ManageListingCard.closeListing" />
                   </InlineTextButton>
                 </MenuItem>
+
               </MenuContent>
             </Menu>
           </div>
@@ -654,17 +615,24 @@ export const ManageListingCard = props => {
             <FormattedMessage id="ManageListingCard.editListing" />
           </NamedLink>
 
-          <LinkToStockOrAvailabilityTab
-            id={id}
-            slug={slug}
-            title={title}
-            editListingLinkType={editListingLinkType}
-            isBookable={isBookable}
-            currentStock={currentStock}
-            hasListingType={hasListingType}
-            hasStockManagementInUse={hasStockManagementInUse}
-            intl={intl}
-          />
+          {showDeleteAction ? (
+            <>
+              <span className={css.manageLinksSeparator}>{' • '}</span>
+              <InlineTextButton
+                id={`deleteButton_${currentListing.id.uuid}`}
+                rootClassName={css.manageLinkDelete}
+                onClick={event => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!actionsInProgressListingId) {
+                    onDeleteListing(currentListing.id);
+                  }
+                }}
+              >
+                <FormattedMessage id="ManageListingCard.deleteListing" />
+              </InlineTextButton>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,13 +1,11 @@
 import React from 'react';
 
 import { requiredFieldArrayCheckbox } from '../../../util/validators';
-import { FieldCheckboxGroup } from '../../../components';
+import { FieldCheckboxGroup, NamedLink } from '../../../components';
 
 import { FormattedMessage, intlShape } from '../../../util/reactIntl';
 
 import css from './TermsAndConditions.module.css';
-
-const KEY_CODE_ENTER = 13;
 
 /**
  * A component that renders the terms and conditions.
@@ -21,41 +19,28 @@ const KEY_CODE_ENTER = 13;
  * @returns {JSX.Element}
  */
 const TermsAndConditions = props => {
-  const { onOpenTermsOfService, onOpenPrivacyPolicy, formId, intl } = props;
-
-  const handleClick = callback => e => {
-    e.preventDefault();
-    callback(e);
-  };
-  const handleKeyUp = callback => e => {
-    // Allow click action with keyboard like with normal links
-    if (e.keyCode === KEY_CODE_ENTER) {
-      callback();
-    }
-  };
+  const { formId, intl } = props;
 
   const termsLink = (
-    <span
+    <NamedLink
       className={css.termsLink}
-      onClick={handleClick(onOpenTermsOfService)}
-      role="button"
-      tabIndex="0"
-      onKeyUp={handleKeyUp(onOpenTermsOfService)}
+      name="TermsOfServicePage"
+      target="_blank"
+      rel="noopener noreferrer"
     >
       <FormattedMessage id="AuthenticationPage.termsAndConditionsTermsLinkText" />
-    </span>
+    </NamedLink>
   );
 
   const privacyLink = (
-    <span
+    <NamedLink
       className={css.privacyLink}
-      onClick={handleClick(onOpenPrivacyPolicy)}
-      role="button"
-      tabIndex="0"
-      onKeyUp={handleKeyUp(onOpenPrivacyPolicy)}
+      name="PrivacyPolicyPage"
+      target="_blank"
+      rel="noopener noreferrer"
     >
       <FormattedMessage id="AuthenticationPage.termsAndConditionsPrivacyLinkText" />
-    </span>
+    </NamedLink>
   );
 
   return (

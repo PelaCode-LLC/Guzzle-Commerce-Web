@@ -17,6 +17,13 @@ import * as log from '../../util/log';
 import { parse } from '../../util/urlHelpers';
 import { isUserAuthorized } from '../../util/userHelpers';
 import { isBookingProcessAlias } from '../../transactions/transaction';
+import {
+  createListingBackend,
+  fetchListingByIdBackend,
+  updateListingBackend,
+  toBackendIdFromUuid,
+  toSdkOwnListingResponse,
+} from '../../util/backend';
 
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
 import {
@@ -40,6 +47,49 @@ const imageIds = images => {
   // For newly uploaded image the UUID can be found from "img.imageId"
   // and for existing listing images the id is "img.id"
   return images ? images.map(img => img.imageId || img.id) : null;
+};
+
+const fileToDataUrl = file => {
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') {
+      resolve(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+};
+
+const resolveBackendImageUrl = async images => {
+  const firstImage = Array.isArray(images) ? images[0] : null;
+
+  if (!firstImage) {
+    return null;
+  }
+
+  if (typeof firstImage === 'string') {
+    return firstImage;
+  }
+
+  const existingVariantUrl =
+    firstImage?.attributes?.variants?.['scaled-large']?.url ||
+    firstImage?.attributes?.variants?.['listing-card']?.url ||
+    firstImage?.attributes?.variants?.square?.url ||
+    firstImage?.url ||
+    null;
+
+  if (existingVariantUrl) {
+    return existingVariantUrl;
+  }
+
+  if (firstImage.file) {
+    return fileToDataUrl(firstImage.file);
+  }
+
+  return null;
 };
 
 // After listing creation & update, we want to make sure that uploadedImages state is cleaned
@@ -92,6 +142,21 @@ const sortExceptionsByStartTime = (a, b) => {
 export const showListingThunk = createAsyncThunk(
   'EditListingPage/showListing',
   ({ actionPayload, config }, { dispatch, rejectWithValue, extra: sdk }) => {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const backendListingId = toBackendIdFromUuid(actionPayload?.id?.uuid || actionPayload?.id);
+      return fetchListingByIdBackend(backendListingId)
+        .then(listing => {
+          const response = toSdkOwnListingResponse(listing, 'draft');
+          dispatch(addMarketplaceEntities(response));
+          return response;
+        })
+        .catch(e => {
+          return rejectWithValue(storableError(e));
+        });
+    }
+
     const imageVariantInfo = getImageVariantInfo(config.layout.listingImage);
     const queryParams = {
       include: ['author', 'images', 'currentStock'],
@@ -166,6 +231,42 @@ export const createListingDraftThunk = createAsyncThunk(
   'EditListingPage/createListingDraft',
   ({ data, config }, { dispatch, rejectWithValue, extra: sdk }) => {
     const { stockUpdate, images, ...rest } = data;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+      if (!token) {
+        return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+      }
+
+      return resolveBackendImageUrl(images)
+        .then(imageUrl => {
+          const category = rest?.publicData?.categoryLevel1 || rest?.publicData?.category1;
+          const listingPayload = {
+            title: rest.title,
+            description: rest.description,
+            category,
+            price:
+              typeof rest?.price?.amount === 'number' ? Math.max(1, rest.price.amount / 100) : 1,
+            currency: rest?.price?.currency || config.currency || 'USD',
+            imageUrl,
+          };
+
+          return Object.fromEntries(
+            Object.entries(listingPayload).filter(([, value]) => value !== null && value !== undefined)
+          );
+        })
+        .then(cleanedPayload => createListingBackend(token, cleanedPayload))
+        .then(createdListing => {
+          const response = toSdkOwnListingResponse(createdListing, 'draft');
+          dispatch(addMarketplaceEntities(response));
+          return response;
+        })
+        .catch(e => {
+          log.error(e, 'create-listing-draft-failed', { listingData: data });
+          return rejectWithValue(storableError(e));
+        });
+    }
 
     // If images should be saved, create array out of the image UUIDs for the API call
     const imageProperty = typeof images !== 'undefined' ? { images: imageIds(images) } : {};
@@ -210,6 +311,46 @@ export const updateListingThunk = createAsyncThunk(
   'EditListingPage/updateListing',
   ({ tab, data, config }, { dispatch, getState, rejectWithValue, extra: sdk }) => {
     const { id, stockUpdate, images, ...rest } = data;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+      const backendListingId = toBackendIdFromUuid(id?.uuid || id);
+      if (!token) {
+        return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+      }
+
+      return resolveBackendImageUrl(images)
+        .then(imageUrl => {
+          const category = rest?.publicData?.categoryLevel1 || rest?.publicData?.category1;
+          const listingPayload = {
+            title: rest.title,
+            description: rest.description,
+            category,
+            price:
+              typeof rest?.price?.amount === 'number'
+                ? Math.max(1, rest.price.amount / 100)
+                : undefined,
+            currency: rest?.price?.currency,
+            status: rest.state,
+            imageUrl: imageUrl || undefined,
+          };
+
+          return Object.fromEntries(
+            Object.entries(listingPayload).filter(([, value]) => typeof value !== 'undefined')
+          );
+        })
+        .then(cleanedPayload => updateListingBackend(token, backendListingId, cleanedPayload))
+        .then(updatedListing => {
+          const response = toSdkOwnListingResponse(updatedListing, 'draft');
+          dispatch(addMarketplaceEntities(response));
+          return { response, tab };
+        })
+        .catch(e => {
+          log.error(e, 'update-listing-failed', { listingData: data });
+          return rejectWithValue(storableError(e));
+        });
+    }
 
     // If images should be saved, create array out of the image UUIDs for the API call
     const imageProperty = typeof images !== 'undefined' ? { images: imageIds(images) } : {};
@@ -263,6 +404,27 @@ export const requestUpdateListing = (tab, data, config) => (dispatch, getState, 
 /////////////////////
 
 const publishListingPayloadCreator = ({ listingId }, { dispatch, rejectWithValue, extra: sdk }) => {
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+  if (!useSharetribeConsole) {
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+    const backendListingId = toBackendIdFromUuid(listingId?.uuid || listingId);
+
+    if (!token) {
+      return rejectWithValue(storableError({ error: 'Missing authentication token' }));
+    }
+
+    return updateListingBackend(token, backendListingId, { status: 'active' })
+      .then(updatedListing => {
+        const response = toSdkOwnListingResponse(updatedListing);
+        dispatch(addMarketplaceEntities(response));
+        return response;
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
+
   return sdk.ownListings
     .publishDraft({ id: listingId }, { expand: true })
     .then(response => {
@@ -292,6 +454,18 @@ export const requestPublishListingDraft = listingId => (dispatch, getState, sdk)
 export const uploadImageThunk = createAsyncThunk(
   'EditListingPage/uploadImage',
   ({ actionPayload, listingImageConfig }, { rejectWithValue, extra: sdk }) => {
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+
+    if (!useSharetribeConsole) {
+      return Promise.resolve({
+        data: {
+          id: actionPayload.id,
+          imageId: `local-image-${Date.now()}`,
+          file: actionPayload.file,
+        },
+      });
+    }
+
     const imageVariantInfo = getImageVariantInfo(listingImageConfig);
     const queryParams = {
       expand: true,
@@ -865,6 +1039,7 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   dispatch(clearUpdatedTab());
   dispatch(clearPublishError());
   const { id, type } = params;
+  const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
   const fetchCurrentUserOptions = {
     updateNotifications: false,
   };
@@ -885,6 +1060,19 @@ export const loadData = (params, search, config) => (dispatch, getState, sdk) =>
   }
 
   const payload = { id: new UUID(id) };
+  if (!useSharetribeConsole) {
+    return Promise.allSettled([
+      dispatch(requestShowListing(payload, config)),
+      dispatch(fetchCurrentUser(fetchCurrentUserOptions)),
+    ]).then(results => {
+      const listingResult = results[0];
+      if (listingResult.status === 'rejected') {
+        throw listingResult.reason;
+      }
+      return results;
+    });
+  }
+
   return Promise.all([
     dispatch(requestShowListing(payload, config)),
     dispatch(fetchCurrentUser(fetchCurrentUserOptions)),

@@ -113,6 +113,12 @@
   }
 }
 
+.themeToggle {
+  composes: topbarLink;
+  border: 0;
+  background-color: transparent;
+}
+
 .topbarLinkLabel {
   composes: textSmall from global;
   display: inline-block;

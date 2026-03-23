@@ -15,6 +15,8 @@ import { hasPermissionToViewData, isUserAuthorized } from '../../util/userHelper
 import { parse } from '../../util/urlHelpers';
 
 import { addMarketplaceEntities } from '../../ducks/marketplaceData.duck';
+import appSettings from '../../config/settings';
+import { searchListingsBackend, toSdkSearchResponse } from '../../util/backend';
 
 // Pagination page size might need to be dynamic on responsive page layouts
 // Current design has max 3 columns 12 is divisible by 2 and 3
@@ -285,6 +287,32 @@ const searchListingsPayloadCreator = ({ searchParams, config }, thunkAPI) => {
     ...sortMaybe,
     perPage,
   };
+
+  if (!appSettings.useSharetribeConsole || !sdk || !sdk.listings) {
+    const page = Number(searchParams?.page || 1);
+    const limit = Number(perPage || RESULT_PAGE_SIZE);
+    const offset = (page - 1) * limit;
+    const priceRange = searchParams?.price ? String(searchParams.price).split(',') : [];
+    const minPrice = priceRange.length === 2 ? priceRange[0] : undefined;
+    const maxPrice = priceRange.length === 2 ? priceRange[1] : undefined;
+
+    const backendParams = {
+      search: searchParams?.keywords || searchParams?.address,
+      category: searchParams?.pub_categoryLevel1,
+      minPrice,
+      maxPrice,
+      limit,
+      offset,
+    };
+
+    return searchListingsBackend(backendParams)
+      .then(payload => {
+        const response = toSdkSearchResponse(payload, page, limit);
+        dispatch(addMarketplaceEntities(response, {}));
+        return response;
+      })
+      .catch(e => rejectWithValue(storableError(e)));
+  }
 
   return sdk.listings
     .query(params)

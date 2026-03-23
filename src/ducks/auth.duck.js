@@ -3,6 +3,7 @@ import * as log from '../util/log';
 import { storableError } from '../util/errors';
 import { clearCurrentUser, fetchCurrentUser } from './user.duck';
 import { createUserWithIdp } from '../util/api';
+import { registerUser, loginUser, fetchMe } from '../util/backend';
 
 const authenticated = authInfo => authInfo?.isAnonymous === false;
 const loggedInAs = authInfo => authInfo?.isLoggedInAs === true;
@@ -42,6 +43,17 @@ const initialState = {
 
 const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
   const { extra: sdk } = thunkAPI;
+
+  // If there is a local JWT (custom backend auth), report as authenticated
+  // without hitting the Sharetribe SDK which knows nothing about our JWT session.
+  const hasJwt = typeof localStorage !== 'undefined' && !!localStorage.getItem('jwt');
+  if (hasJwt) {
+    return Promise.resolve({ isAnonymous: false, source: 'jwt' });
+  }
+
+  if (!sdk || typeof sdk.authInfo !== 'function') {
+    return Promise.resolve(null);
+  }
   return sdk.authInfo().catch(e => {
     // Requesting auth info just reads the token from the token
     // store (i.e. cookies), and should not fail in normal
@@ -56,12 +68,13 @@ const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
 const loginThunk = createAsyncThunk(
   'auth/login',
   ({ username, password }, thunkAPI) => {
-    const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const { rejectWithValue, dispatch } = thunkAPI;
 
-    return sdk
-      .login({ username, password })
-      .then(() => {
-        return dispatch(fetchCurrentUser({ afterLogin: true }));
+    return loginUser({ email: username, password })
+      .then(data => {
+        // store token in localStorage for subsequent requests
+        localStorage.setItem('jwt', data.token);
+        return dispatch(fetchCurrentUser({ afterLogin: true, token: data.token }));
       })
       .then(() => ({ username, password }))
       .catch(e => rejectWithValue(storableError(e)));
@@ -80,14 +93,25 @@ const logoutThunk = createAsyncThunk(
   'auth/logout',
   (_, thunkAPI) => {
     const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const useSharetribeConsole = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
+    const hasLocalJwt = !!localStorage.getItem('jwt');
+
+    const clearSessionLocally = () => {
+      dispatch(clearCurrentUser());
+      log.clearUserId();
+      return true;
+    };
+
+    const shouldUseSdkLogout =
+      typeof sdk?.logout === 'function' && (useSharetribeConsole || !hasLocalJwt);
+
+    if (!shouldUseSdkLogout) {
+      return Promise.resolve(clearSessionLocally());
+    }
 
     return sdk
       .logout()
-      .then(() => {
-        dispatch(clearCurrentUser());
-        log.clearUserId();
-        return true;
-      })
+      .then(() => clearSessionLocally())
       .catch(e => rejectWithValue(storableError(e)));
   },
   {
@@ -103,13 +127,14 @@ const logoutThunk = createAsyncThunk(
 const signupThunk = createAsyncThunk(
   'auth/signup',
   (params, thunkAPI) => {
-    const { rejectWithValue, extra: sdk, dispatch } = thunkAPI;
+    const { rejectWithValue, dispatch } = thunkAPI;
 
-    return sdk.currentUser
-      .create(params)
-      .then(() =>
-        dispatch(loginThunk({ username: params.email, password: params.password })).unwrap()
-      )
+    return registerUser(params)
+      .then(data => {
+        // store token
+        localStorage.setItem('jwt', data.token);
+        return dispatch(fetchCurrentUser({ afterLogin: true, token: data.token }));
+      })
       .then(() => params)
       .catch(e => {
         log.error(e, 'signup-failed', {
@@ -130,11 +155,18 @@ const signupThunk = createAsyncThunk(
   }
 );
 
+// IDP flow still uses local backend helper to create user; backend can then return token
 const signupWithIdpThunk = createAsyncThunk(
   'auth/signupWithIdp',
   (params, thunkAPI) => {
     const { rejectWithValue, dispatch } = thunkAPI;
     return createUserWithIdp(params)
+      .then(data => {
+        // backend should return token similar to register/login
+        if (data.token) {
+          localStorage.setItem('jwt', data.token);
+        }
+      })
       .then(() => dispatch(fetchCurrentUser({ afterLogin: true })))
       .then(() => params)
       .catch(e => {
@@ -212,6 +244,7 @@ const authSlice = createSlice({
       })
       .addCase(signupThunk.fulfilled, state => {
         state.signupInProgress = false;
+        state.isAuthenticated = true;
       })
       .addCase(signupThunk.rejected, (state, action) => {
         state.signupInProgress = false;
@@ -258,6 +291,8 @@ export const login = (username, password) => dispatch => {
 };
 
 export const logout = () => dispatch => {
+  // clear stored token
+  localStorage.removeItem('jwt');
   return dispatch(logoutThunk()).unwrap();
 };
 

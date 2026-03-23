@@ -133,15 +133,6 @@ describe('ConfirmSignupForm', () => {
       />
     );
 
-    // Simulate user interaction and select parent level category
-    await user.selectOptions(
-      screen.getByRole('combobox'),
-      screen.getByRole('option', { name: 'Seller' })
-    );
-
-    // Test that sign up button is disabled at first
-    expect(screen.getByRole('button', { name: 'ConfirmSignupForm.signUp' })).toBeDisabled();
-
     // Check that auth info details are in the form already
     expect(screen.getByRole('textbox', { name: 'ConfirmSignupForm.emailLabel' })).toHaveValue(
       authInfo.email
@@ -153,19 +144,13 @@ describe('ConfirmSignupForm', () => {
       authInfo.lastName
     );
 
-    // Type a value in the required text field
-    await user.type(screen.getByLabelText('Text Field'), 'Text value');
-
-    // Test that sign up button is still disabled before clicking the checkbox
-    expect(screen.getByRole('button', { name: 'ConfirmSignupForm.signUp' })).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/AuthenticationPage.termsAndConditionsAcceptText/i));
 
-    // Test that sign up button is enabled after typing the final value and selecting the checkbox
+    // Continue button should stay enabled with valid form values
     expect(screen.getByRole('button', { name: 'ConfirmSignupForm.signUp' })).toBeEnabled();
   });
 
-  it('shows custom user fields according to configuration', async () => {
-    const user = userEvent.setup();
+  it('does not show custom user fields in confirm signup flow', async () => {
     render(
       <ConfirmSignupForm
         authInfo={authInfo}
@@ -178,21 +163,10 @@ describe('ConfirmSignupForm', () => {
       />
     );
 
-    // Simulate user interaction and select parent level category
-    await user.selectOptions(
-      screen.getByRole('combobox'),
-      screen.getByRole('option', { name: 'Seller' })
-    );
-
-    // Show user fields that have not been limited to type and have displayInSignUp: true
-    expect(screen.getByText('Enum Field 1')).toBeInTheDocument();
-    expect(screen.getByText('Text Field')).toBeInTheDocument();
-
-    // Don't show user fields that have displayInSignUp: false
+    // Custom user fields are intentionally hidden on signup confirmation.
+    expect(screen.queryByText('Enum Field 1')).toBeNull();
+    expect(screen.queryByText('Text Field')).toBeNull();
     expect(screen.queryByText('Boolean Field')).toBeNull();
-
-    // Don't show user fields that are limited to user types –
-    // ConfirmSignupForm does not support user types yet!
     expect(screen.queryByText('Enum Field 2')).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ const log = require('./log');
 const { getRootURL } = require('./api-util/rootURL');
 
 const PREVENT_DATA_LOADING_IN_SSR = process.env.PREVENT_DATA_LOADING_IN_SSR === 'true';
+const USE_SHARETRIBE_CONSOLE = process.env.REACT_APP_USE_SHARETRIBE_CONSOLE === 'true';
 
 const extractHostedConfig = configAssets => {
   const configEntries = Object.entries(configAssets);
@@ -50,24 +51,26 @@ exports.loadData = function(requestUrl, sdk, appInfo) {
     }, []);
   };
 
-  // First fetch app-wide assets
+  const fetchAndLoadData = USE_SHARETRIBE_CONSOLE
+    ? store.dispatch(fetchAppAssets(defaultConfig.appCdnAssets)).then(fetchedAppAssets => {
+        const { translations: translationsRaw, ...rest } = fetchedAppAssets || {};
+
+        // We'll handle translations as a separate data.
+        // It's given to React Intl instead of pushing to config Context
+        translations = translationsRaw?.data || {};
+
+        // Rest of the assets are considered as hosted configs
+        // This structure just gives possibilities to add initial config data
+        hostedConfig = { ...hostedConfig, ...extractHostedConfig(rest) };
+        return Promise.all(dataLoadingCalls(hostedConfig));
+      })
+    : Promise.all(dataLoadingCalls({}));
+
+  // First fetch app-wide assets (if enabled)
   // Then make loadData calls
   // And return object containing preloaded state and translations
   // This order supports other asset (in the future) that should be fetched before data calls.
-  return store
-    .dispatch(fetchAppAssets(defaultConfig.appCdnAssets))
-    .then(fetchedAppAssets => {
-      const { translations: translationsRaw, ...rest } = fetchedAppAssets || {};
-
-      // We'll handle translations as a separate data.
-      // It's given to React Intl instead of pushing to config Context
-      translations = translationsRaw?.data || {};
-
-      // Rest of the assets are considered as hosted configs
-      // This structure just gives possibilities to add initial config data
-      hostedConfig = { ...hostedConfig, ...extractHostedConfig(rest) };
-      return Promise.all(dataLoadingCalls(hostedConfig));
-    })
+  return fetchAndLoadData
     .then(() => {
       return { preloadedState: store.getState(), translations, hostedConfig };
     })

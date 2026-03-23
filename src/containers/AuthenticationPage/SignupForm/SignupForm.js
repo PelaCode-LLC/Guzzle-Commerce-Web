@@ -10,7 +10,6 @@ import { getPropsForCustomUserFieldInputs } from '../../../util/userHelpers';
 
 import { Form, PrimaryButton, FieldTextInput, CustomExtendedDataField } from '../../../components';
 
-import FieldSelectUserType from '../FieldSelectUserType';
 import UserFieldDisplayName from '../UserFieldDisplayName';
 import UserFieldPhoneNumber from '../UserFieldPhoneNumber';
 
@@ -42,7 +41,6 @@ const SignupFormComponent = props => (
         formId,
         handleSubmit,
         inProgress,
-        invalid,
         intl,
         termsAndConditions,
         preselectedUserType,
@@ -100,28 +98,19 @@ const SignupFormComponent = props => (
         passwordMaxLength
       );
 
-      // Custom user fields. Since user types are not supported here,
-      // only fields with no user type id limitation are selected.
-      const userFieldProps = getPropsForCustomUserFieldInputs(userFields, userType);
+      // Custom user fields are intentionally hidden during signup.
+      const userFieldProps = [];
 
-      const noUserTypes = !userType && !(userTypes?.length > 0);
       const userTypeConfig = userTypes.find(config => config.userType === userType);
-      const showDefaultUserFields = userType || noUserTypes;
-      const showCustomUserFields = (userType || noUserTypes) && userFieldProps?.length > 0;
+      const showDefaultUserFields = true;
+      const showCustomUserFields = userFieldProps?.length > 0;
 
       const classes = classNames(rootClassName || css.root, className);
       const submitInProgress = inProgress;
-      const submitDisabled = invalid || submitInProgress || isPasswordUsedMoreThanOnce(values);
+      const submitDisabled = submitInProgress || isPasswordUsedMoreThanOnce(values);
 
       return (
         <Form className={classes} onSubmit={handleSubmit}>
-          <FieldSelectUserType
-            name="userType"
-            userTypes={userTypes}
-            hasExistingUserType={!!preselectedUserType}
-            intl={intl}
-          />
-
           {showDefaultUserFields ? (
             <div className={css.defaultUserFields}>
               <FieldTextInput
