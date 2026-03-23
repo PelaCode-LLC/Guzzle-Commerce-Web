@@ -1,29 +1,17 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 const { getUserProfile, getCurrentUser, updateUserProfile } = require('../controllers/userController');
+const { uploadFile, deleteFile, keyFromUrl } = require('../services/storage');
 
 const router = express.Router();
 
-// Ensure avatar uploads directory exists
-const avatarsDir = path.join(__dirname, '../../uploads/avatars');
-if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
-}
-
-const avatarStorage = multer.diskStorage({
-  destination: avatarsDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `avatar-${req.userId}-${Date.now()}${ext}`);
-  },
-});
-
+// Use memory storage so the buffer can be forwarded to R2 (or saved to disk
+// via the storage service) without writing a temp file.
 const uploadAvatar = multer({
-  storage: avatarStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -56,9 +44,25 @@ router.post('/me/avatar', authMiddleware, (req, res, next) => {
     return res.status(400).json({ error: 'No image file provided' });
   }
 
-  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-
   try {
+    // Delete previous avatar from storage if one exists
+    const existing = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [req.userId]);
+    const oldUrl = existing.rows[0]?.avatar_url;
+    if (oldUrl) {
+      const oldKey = keyFromUrl(oldUrl);
+      if (oldKey) {
+        await deleteFile(oldKey).catch(() => {}); // best-effort
+      }
+    }
+
+    const ext = path.extname(req.file.originalname) || '.jpg';
+    const key = `avatars/avatar-${req.userId}-${Date.now()}${ext}`;
+    const avatarUrl = await uploadFile({
+      buffer: req.file.buffer,
+      key,
+      mimeType: req.file.mimetype,
+    });
+
     await pool.query(
       'UPDATE users SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [avatarUrl, req.userId]
