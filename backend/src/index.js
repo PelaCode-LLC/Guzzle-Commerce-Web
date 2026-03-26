@@ -32,10 +32,7 @@ initializeDatabase().catch(err => {
   process.exit(1);
 });
 
-// Middleware
-app.use(helmet());
-app.use(morgan('dev'));
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow same-origin, server-to-server, and non-browser requests.
     if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
@@ -45,7 +42,14 @@ app.use(cors({
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   credentials: true,
-}));
+};
+
+// Middleware
+app.use(helmet());
+app.use(morgan('dev'));
+// Handle OPTIONS preflight for all routes before any other middleware.
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
