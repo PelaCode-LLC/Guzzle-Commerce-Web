@@ -6,6 +6,7 @@
   // Note: static asset projects do not read these at React build time.
   "vars": {
     "REACT_APP_ENV": "production",
+    "REACT_APP_MARKETPLACE_NAME": "Guzzle Commerce",
     "REACT_APP_USE_SHARETRIBE_CONSOLE": "false"
   },
   "assets": {
