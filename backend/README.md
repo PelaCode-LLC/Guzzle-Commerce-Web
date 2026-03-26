@@ -226,5 +226,3 @@ Authorization: Bearer YOUR_TOKEN_HERE
 ## License
 
 MIT
-
-testing
