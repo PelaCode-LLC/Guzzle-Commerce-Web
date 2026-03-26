@@ -264,8 +264,10 @@ app.get('/{*splat}', async (req, res) => {
 
   // Note: Check ttl (time-to-live) and maxBytes (10MB by default for cached data) from sdkCacheProxy.js
   // You could also define maxBytes based on free memory: const maxBytes = os.freemem() * 0.5;
-  const sharetribeSDK = sdkUtils.getSdk(req, res);
-  const sdk = getSDKProxy(sharetribeSDK);
+  // In backend-only mode we don't need to bootstrap Sharetribe SDK for each SSR request.
+  // This prevents runtime failures if Sharetribe credentials are intentionally omitted.
+  const sharetribeSDK = USE_SHARETRIBE_CONSOLE ? sdkUtils.getSdk(req, res) : null;
+  const sdk = USE_SHARETRIBE_CONSOLE ? getSDKProxy(sharetribeSDK) : null;
 
   res.locals.beforeLoadDataTimestamp = Date.now();
 
@@ -295,7 +297,10 @@ app.get('/{*splat}', async (req, res) => {
         // Routes component injects the context.unauthorized when the
         // user isn't logged in to view the page that requires
         // authentication.
-        sdk.authInfo().then(authInfo => {
+        const authInfoPromise = sdk?.authInfo
+          ? sdk.authInfo()
+          : Promise.resolve({ isAnonymous: true });
+        authInfoPromise.then(authInfo => {
           if (authInfo && authInfo.isAnonymous === false) {
             // It looks like the user is logged in.
             // Full verification would require actual call to API
