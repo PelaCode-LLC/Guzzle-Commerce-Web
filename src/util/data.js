@@ -260,7 +260,16 @@ export const ensureOwnListing = listing => {
  */
 export const ensureUser = user => {
   const empty = { id: null, type: 'user', attributes: { profile: {} } };
-  return { ...empty, ...user };
+  const ensuredAttributes = {
+    ...empty.attributes,
+    ...(user?.attributes || {}),
+    profile: {
+      ...empty.attributes.profile,
+      ...(user?.attributes?.profile || {}),
+    },
+  };
+
+  return { ...empty, ...user, attributes: ensuredAttributes };
 };
 
 /**
@@ -270,7 +279,21 @@ export const ensureUser = user => {
  */
 export const ensureCurrentUser = user => {
   const empty = { id: null, type: 'currentUser', attributes: { profile: {} }, profileImage: {} };
-  return { ...empty, ...user };
+  const ensuredAttributes = {
+    ...empty.attributes,
+    ...(user?.attributes || {}),
+    profile: {
+      ...empty.attributes.profile,
+      ...(user?.attributes?.profile || {}),
+    },
+  };
+
+  return {
+    ...empty,
+    ...user,
+    attributes: ensuredAttributes,
+    profileImage: user?.profileImage || empty.profileImage,
+  };
 };
 
 /**
