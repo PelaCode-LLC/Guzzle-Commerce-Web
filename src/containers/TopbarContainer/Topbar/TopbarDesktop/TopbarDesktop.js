@@ -170,8 +170,9 @@ const TopbarDesktop = props => {
   }, []);
 
   const marketplaceName = config.marketplaceName;
-  const authenticatedOnClientSide = mounted && isAuthenticated;
-  const isAuthenticatedOrJustHydrated = isAuthenticated || !mounted;
+  const hasCurrentUser = !!currentUser?.id;
+  const authenticatedOnClientSide = mounted && isAuthenticated && hasCurrentUser;
+  const hideUnauthenticatedLinks = !mounted || authenticatedOnClientSide;
 
   const giveSpaceForSearch = customLinks == null || customLinks?.length === 0;
   const classes = classNames(rootClassName || css.root, className);
@@ -190,8 +191,8 @@ const TopbarDesktop = props => {
     />
   ) : null;
 
-  const signupLinkMaybe = isAuthenticatedOrJustHydrated ? null : <SignupLink />;
-  const loginLinkMaybe = isAuthenticatedOrJustHydrated ? null : <LoginLink />;
+  const signupLinkMaybe = hideUnauthenticatedLinks ? null : <SignupLink />;
+  const loginLinkMaybe = hideUnauthenticatedLinks ? null : <LoginLink />;
   const themeToggleLabel =
     theme === THEME_DARK
       ? intl.formatMessage({ id: 'Topbar.themeLight' })
@@ -231,7 +232,7 @@ const TopbarDesktop = props => {
         currentPage={currentPage}
         customLinks={customLinks}
         intl={intl}
-        hasClientSideContentReady={authenticatedOnClientSide || !isAuthenticatedOrJustHydrated}
+        hasClientSideContentReady={mounted}
         showCreateListingsLink={showCreateListingsLink}
       />
 
