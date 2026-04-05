@@ -8,6 +8,24 @@ import { registerUser, loginUser, fetchMe } from '../util/backend';
 const authenticated = authInfo => authInfo?.isAnonymous === false;
 const loggedInAs = authInfo => authInfo?.isLoggedInAs === true;
 
+const getStoredJwt = () => {
+  if (typeof localStorage === 'undefined') {
+    return null;
+  }
+
+  const raw = localStorage.getItem('jwt');
+  if (!raw) {
+    return null;
+  }
+
+  const token = String(raw).trim();
+  if (!token || token === 'undefined' || token === 'null') {
+    return null;
+  }
+
+  return token;
+};
+
 // ================ Initial State ================ //
 
 const initialState = {
@@ -46,8 +64,8 @@ const authInfoThunk = createAsyncThunk('auth/authInfo', (_, thunkAPI) => {
 
   // If there is a local JWT (custom backend auth), report as authenticated
   // without hitting the Sharetribe SDK which knows nothing about our JWT session.
-  const hasJwt = typeof localStorage !== 'undefined' && !!localStorage.getItem('jwt');
-  if (hasJwt) {
+  const storedJwt = getStoredJwt();
+  if (storedJwt) {
     return Promise.resolve({ isAnonymous: false, source: 'jwt' });
   }
 

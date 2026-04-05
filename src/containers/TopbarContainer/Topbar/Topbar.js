@@ -223,10 +223,12 @@ const TopbarComponent = props => {
   };
 
   const showCreateListingsLink = showCreateListingLinkForUser(config, currentUser);
-    const themeToggleLabel =
-      theme === THEME_DARK
-        ? intl.formatMessage({ id: 'Topbar.themeLight' })
-        : intl.formatMessage({ id: 'Topbar.themeDark' });
+  const hasCurrentUser = !!currentUser?.id;
+  const effectiveIsAuthenticated = isAuthenticated && hasCurrentUser;
+  const themeToggleLabel =
+    theme === THEME_DARK
+      ? intl.formatMessage({ id: 'Topbar.themeLight' })
+      : intl.formatMessage({ id: 'Topbar.themeDark' });
 
   const { customer: isCustomer, provider: isProvider } = getCurrentUserTypeRoles(
     config,
@@ -268,7 +270,7 @@ const TopbarComponent = props => {
 
   const mobileMenu = (
     <TopbarMobileMenu
-      isAuthenticated={isAuthenticated}
+      isAuthenticated={effectiveIsAuthenticated}
       currentUser={currentUser}
       onLogout={handleLogout}
       notificationCount={notificationCount}
@@ -357,7 +359,7 @@ const TopbarComponent = props => {
         <IconArrowHead direction="right" size="small" rootClassName={css.skiptoMainArrow} />
       </Button>
       <LimitedAccessBanner
-        isAuthenticated={isAuthenticated}
+        isAuthenticated={effectiveIsAuthenticated}
         isLoggedInAs={isLoggedInAs}
         authScopes={authScopes}
         currentUser={currentUser}
@@ -396,7 +398,7 @@ const TopbarComponent = props => {
           currentPage={resolvedCurrentPage}
           initialSearchFormValues={initialSearchFormValues}
           intl={intl}
-          isAuthenticated={isAuthenticated}
+          isAuthenticated={effectiveIsAuthenticated}
           notificationCount={notificationCount}
           onLogout={handleLogout}
           onSearchSubmit={handleSubmit}
