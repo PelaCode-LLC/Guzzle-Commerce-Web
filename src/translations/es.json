@@ -529,6 +529,7 @@
   "InquiryForm.messagePlaceholder": "Hola {authorDisplayName}! Me gustaría saber…",
   "InquiryForm.messageRequired": "Necesitas escribir un mensaje",
   "InquiryForm.submitSuccess": "Mensaje enviado a {authorDisplayName}.",
+  "InquiryForm.submitButtonSent": "Enviado",
   "InquiryForm.submitButtonText": "Enviar consulta",
   "InquiryWithoutPaymentForm.ctaButton": "Enviar una consulta",
   "IntegerRangeFilter.labelSelectedPlain": "{minValue} - {maxValue}",

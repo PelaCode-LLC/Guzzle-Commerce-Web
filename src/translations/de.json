@@ -529,6 +529,7 @@
   "InquiryForm.messagePlaceholder": "Hallo {authorDisplayName}! Ich freue mich auf…",
   "InquiryForm.messageRequired": "Eine Nachricht wird benötigt",
   "InquiryForm.submitSuccess": "Nachricht an {authorDisplayName} gesendet.",
+  "InquiryForm.submitButtonSent": "Gesendet",
   "InquiryForm.submitButtonText": "Anfrage absenden",
   "InquiryWithoutPaymentForm.ctaButton": "Eine Anfrage senden",
   "IntegerRangeFilter.labelSelectedPlain": "{minValue} - {maxValue}",
