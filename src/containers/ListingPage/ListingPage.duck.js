@@ -9,6 +9,7 @@ import * as log from '../../util/log';
 import { denormalisedResponseEntities } from '../../util/data';
 import {
   fetchListingByIdBackend,
+  sendMessageBackend,
   toBackendIdFromUuid,
   toSdkOwnListingResponse,
   toSdkSingleListingResponse,
@@ -241,6 +242,34 @@ const sendInquiryPayloadCreator = (
   { listing, message },
   { dispatch, rejectWithValue, extra: sdk }
 ) => {
+  const localJwt = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+  const hasLocalJwt = !!localJwt;
+
+  if (hasLocalJwt) {
+    const listingAuthorId = listing?.author?.id;
+    const recipientId = listingAuthorId ? toBackendIdFromUuid(listingAuthorId) : null;
+    const content = message?.trim();
+
+    if (!recipientId || !content) {
+      return rejectWithValue(
+        storableError(new Error('Could not resolve recipient or message content for inquiry'))
+      );
+    }
+
+    return sendMessageBackend(localJwt, {
+      recipientId,
+      content,
+      transactionId: null,
+    })
+      .then(() => {
+        dispatch(setCurrentUserHasOrders());
+        return null;
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
+
   const processAlias = listing?.attributes?.publicData?.transactionProcessAlias;
   if (!processAlias) {
     const error = new Error('No transaction process attached to listing');

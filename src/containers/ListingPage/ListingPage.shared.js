@@ -142,7 +142,15 @@ export const handleContactUser = parameters => () => {
  * @param {Object} parameters all the info needed to create inquiry.
  */
 export const handleSubmitInquiry = parameters => values => {
-  const { history, params, getListing, onSendInquiry, routes, setInquiryModalOpen } = parameters;
+  const {
+    history,
+    params,
+    getListing,
+    onSendInquiry,
+    routes,
+    setInquiryModalOpen,
+    onInquirySent,
+  } = parameters;
 
   const listingId = new UUID(params.id);
   const listing = getListing(listingId);
@@ -150,12 +158,24 @@ export const handleSubmitInquiry = parameters => values => {
 
   onSendInquiry(listing, message.trim())
     .then(txId => {
+      const resolvedTxId =
+        typeof txId === 'string' ? txId : txId?.uuid || txId?._uuid || txId?.id?.uuid || null;
+
+      // With custom backend auth we can send a direct message without creating a tx.
+      // In that case, keep modal open and show a success message.
+      if (!resolvedTxId) {
+        if (typeof onInquirySent === 'function') {
+          onInquirySent(true);
+        }
+        return;
+      }
+
       setInquiryModalOpen(false);
 
       const transactionPage =
         listing.attributes.publicData.unitType === REQUEST ? 'SaleDetailsPage' : 'OrderDetailsPage';
       // Redirect to OrderDetailsPage or SaleDetailsPage
-      history.push(createResourceLocatorString(transactionPage, routes, { id: txId.uuid }, {}));
+      history.push(createResourceLocatorString(transactionPage, routes, { id: resolvedTxId }, {}));
     })
     .catch(() => {
       // Ignore, error handling in duck file

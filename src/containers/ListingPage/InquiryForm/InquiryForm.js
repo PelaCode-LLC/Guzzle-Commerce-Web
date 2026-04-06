@@ -31,6 +31,7 @@ import css from './InquiryForm.module.css';
  * @param {string} props.listingTitle - The listing title
  * @param {string} props.authorDisplayName - The author display name
  * @param {propTypes.error} props.sendInquiryError - The send inquiry error
+ * @param {boolean} [props.inquirySent] - Whether the inquiry was sent successfully
  * @returns {JSX.Element} inquiry form component
  */
 const InquiryForm = props => (
@@ -47,6 +48,7 @@ const InquiryForm = props => (
         listingTitle,
         authorDisplayName,
         sendInquiryError,
+        inquirySent = false,
       } = fieldRenderProps;
 
       const intl = useIntl();
@@ -69,7 +71,7 @@ const InquiryForm = props => (
 
       const classes = classNames(rootClassName || css.root, className);
       const submitInProgress = inProgress;
-      const submitDisabled = submitInProgress;
+      const submitDisabled = submitInProgress || inquirySent;
 
       return (
         <Form className={classes} onSubmit={handleSubmit} enforcePagePreloadFor="OrderDetailsPage">
@@ -87,9 +89,19 @@ const InquiryForm = props => (
             validate={messageRequired}
           />
           <div className={submitButtonWrapperClassName}>
+            {inquirySent ? (
+              <p className={css.success}>
+                <FormattedMessage
+                  id="InquiryForm.submitSuccess"
+                  values={{ authorDisplayName }}
+                />
+              </p>
+            ) : null}
             <ErrorMessage error={sendInquiryError} />
             <PrimaryButton type="submit" inProgress={submitInProgress} disabled={submitDisabled}>
-              <FormattedMessage id="InquiryForm.submitButtonText" />
+              <FormattedMessage
+                id={inquirySent ? 'InquiryForm.submitButtonSent' : 'InquiryForm.submitButtonText'}
+              />
             </PrimaryButton>
           </div>
         </Form>

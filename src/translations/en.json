@@ -528,6 +528,7 @@
   "InquiryForm.messageLabel": "Message to {authorDisplayName}",
   "InquiryForm.messagePlaceholder": "Hello {authorDisplayName}! I'm looking forward to…",
   "InquiryForm.messageRequired": "A message is required",
+  "InquiryForm.submitSuccess": "Message sent to {authorDisplayName}.",
   "InquiryForm.submitButtonText": "Send inquiry",
   "InquiryWithoutPaymentForm.ctaButton": "Send an inquiry",
   "IntegerRangeFilter.labelSelectedPlain": "{minValue} - {maxValue}",

@@ -101,6 +101,7 @@ export const ListingPageComponent = props => {
   const [inquiryModalOpen, setInquiryModalOpen] = useState(
     props.inquiryModalOpenForListingId === props.params.id
   );
+  const [inquirySent, setInquirySent] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -253,7 +254,7 @@ export const ListingPageComponent = props => {
   const { formattedPrice } = priceData(price, config.currency, intl);
 
   const commonParams = { params, history, routes: routeConfiguration };
-  const onContactUser = handleContactUser({
+  const contactUserHandler = handleContactUser({
     ...commonParams,
     currentUser,
     callSetInitialValues,
@@ -261,6 +262,10 @@ export const ListingPageComponent = props => {
     setInitialValues,
     setInquiryModalOpen,
   });
+  const onContactUser = () => {
+    setInquirySent(false);
+    contactUserHandler();
+  };
   // Note: this is for inquire transition to inquiry state in booking, purchase and negotiation processes.
   // Inquiry process is handled through handleSubmit.
   const onSubmitInquiry = handleSubmitInquiry({
@@ -268,6 +273,7 @@ export const ListingPageComponent = props => {
     getListing,
     onSendInquiry,
     setInquiryModalOpen,
+    onInquirySent: setInquirySent,
   });
   // This is to navigate to MakeOfferPage when InvokeNegotiationForm is submitted
   const onNavigateToMakeOfferPage = handleNavigateToMakeOfferPage({
@@ -417,9 +423,13 @@ export const ListingPageComponent = props => {
               authorDisplayName={authorDisplayName}
               onContactUser={onContactUser}
               isInquiryModalOpen={isAuthenticated && inquiryModalOpen}
-              onCloseInquiryModal={() => setInquiryModalOpen(false)}
+              onCloseInquiryModal={() => {
+                setInquiryModalOpen(false);
+                setInquirySent(false);
+              }}
               sendInquiryError={sendInquiryError}
               sendInquiryInProgress={sendInquiryInProgress}
+              inquirySent={inquirySent}
               onSubmitInquiry={onSubmitInquiry}
               currentUser={currentUser}
               onManageDisableScrolling={onManageDisableScrolling}
