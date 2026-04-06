@@ -24,6 +24,7 @@ const SectionAuthorMaybe = props => {
     onCloseInquiryModal,
     sendInquiryError,
     sendInquiryInProgress,
+    inquirySent,
     onSubmitInquiry,
     currentUser,
     onManageDisableScrolling,
@@ -66,6 +67,7 @@ const SectionAuthorMaybe = props => {
           listingTitle={title}
           authorDisplayName={authorDisplayName}
           sendInquiryError={sendInquiryError}
+          inquirySent={inquirySent}
           onSubmit={onSubmitInquiry}
           inProgress={sendInquiryInProgress}
         />

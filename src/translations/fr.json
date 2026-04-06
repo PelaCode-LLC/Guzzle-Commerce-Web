@@ -528,6 +528,8 @@
   "InquiryForm.messageLabel": "Envoyer un message à {authorDisplayName}",
   "InquiryForm.messagePlaceholder": "Bonjour {authorDisplayName} ! J'aimerais…",
   "InquiryForm.messageRequired": "Un message est obligatoire.",
+  "InquiryForm.submitSuccess": "Message envoyé à {authorDisplayName}.",
+  "InquiryForm.submitButtonSent": "Envoyé",
   "InquiryForm.submitButtonText": "Envoyer la demande",
   "InquiryWithoutPaymentForm.ctaButton": "Envoyer une demande",
   "IntegerRangeFilter.labelSelectedPlain": "{minValue} - {maxValue}",

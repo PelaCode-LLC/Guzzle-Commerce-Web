@@ -32,3 +32,12 @@
     margin-top: 0;
   }
 }
+
+.success {
+  color: var(--colorSuccess);
+  margin-top: 0;
+
+  @media (--viewportMedium) {
+    margin-top: 0;
+  }
+}
