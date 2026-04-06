@@ -25,6 +25,7 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
+    previewsEnabled: true  # 🎯 Auto-deploy other branches to preview URLs
 
     envVars:
       - key: NODE_ENV

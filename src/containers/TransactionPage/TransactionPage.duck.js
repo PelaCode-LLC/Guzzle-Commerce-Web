@@ -11,6 +11,12 @@ import {
 } from '../../util/dates';
 import { isTransactionsTransitionInvalidTransition, storableError } from '../../util/errors';
 import { transactionLineItems, transitionPrivileged } from '../../util/api';
+import {
+  fetchMessageThreadBackend,
+  sendMessageBackend,
+  toBackendIdFromUuid,
+  toUuidFromBackendId,
+} from '../../util/backend';
 import * as log from '../../util/log';
 import {
   updatedEntities,
@@ -64,6 +70,98 @@ const getImageVariants = listingImageConfig => {
 };
 
 const delay = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+const getStoredJwt = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem('jwt');
+};
+
+const abbreviateName = name => {
+  if (!name) {
+    return 'U';
+  }
+
+  return name
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2);
+};
+
+const toDisplayName = user => {
+  const firstName = user?.firstName || '';
+  const lastName = user?.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  return fullName || `User ${user?.id || ''}`.trim();
+};
+
+const toSdkUserFromBackend = user => {
+  const displayName = toDisplayName(user);
+
+  return {
+    id: new UUID(toUuidFromBackendId(user?.id || 1)),
+    type: 'user',
+    attributes: {
+      profile: {
+        displayName,
+        abbreviatedName: abbreviateName(displayName),
+      },
+      banned: false,
+      deleted: false,
+    },
+  };
+};
+
+const toSdkMessageFromBackend = backendMessage => {
+  const backendMessageId = backendMessage?.id || 1;
+
+  return {
+    id: new UUID(toUuidFromBackendId(`7${backendMessageId}`)),
+    type: 'message',
+    attributes: {
+      content: backendMessage?.content || '',
+      createdAt: new Date(backendMessage?.createdAt || new Date()),
+      deleted: false,
+    },
+    sender: toSdkUserFromBackend(backendMessage?.sender || {}),
+    recipient: toSdkUserFromBackend(backendMessage?.recipient || {}),
+  };
+};
+
+const getBackendThreadContext = (state, txId) => {
+  const currentUser = state?.user?.currentUser;
+  const entities = state?.marketplaceData?.entities || {};
+  const transactionRef = { id: txId, type: 'transaction' };
+
+  let transaction;
+  try {
+    [transaction] = denormalisedEntities(entities, [transactionRef]);
+  } catch (_error) {
+    transaction = null;
+  }
+
+  if (!transaction || !currentUser?.id?.uuid) {
+    return null;
+  }
+
+  const customerId = transaction?.customer?.id;
+  const providerId = transaction?.provider?.id;
+  const isCustomer = customerId?.uuid && customerId.uuid === currentUser.id.uuid;
+  const otherUserId = isCustomer ? providerId : customerId;
+
+  if (!otherUserId) {
+    return null;
+  }
+
+  return {
+    recipientId: toBackendIdFromUuid(otherUserId),
+    transactionId: toBackendIdFromUuid(txId),
+  };
+};
+
 const refreshTx = (sdk, txId) => sdk.transactions.show({ id: txId }, { expand: true });
 const refreshTransactionEntity = (sdk, txId, dispatch) => {
   delay(3000)
@@ -408,8 +506,40 @@ export const makeTransition = (txId, transitionName, params) => dispatch => {
 ////////////////////
 const fetchMessagesPayloadCreator = (
   { txId, page, config },
-  { dispatch, rejectWithValue, extra: sdk }
+  { dispatch, rejectWithValue, extra: sdk, getState }
 ) => {
+  const token = getStoredJwt();
+  const state = getState();
+  const backendContext = token ? getBackendThreadContext(state, txId) : null;
+
+  if (token && backendContext) {
+    const offset = Math.max(0, (page - 1) * MESSAGES_PAGE_SIZE);
+    return fetchMessageThreadBackend(token, {
+      otherUserId: backendContext.recipientId,
+      transactionId: backendContext.transactionId,
+      limit: MESSAGES_PAGE_SIZE,
+      offset,
+    })
+      .then(response => {
+        const backendMessages = response?.messages || [];
+        const messages = backendMessages.map(toSdkMessageFromBackend);
+        const totalItems = Number(response?.total || backendMessages.length || 0);
+        const totalPages = Math.max(1, Math.ceil(totalItems / MESSAGES_PAGE_SIZE));
+
+        return {
+          messages,
+          pagination: {
+            totalItems,
+            totalPages,
+            page,
+          },
+        };
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
+
   const paging = { page, perPage: MESSAGES_PAGE_SIZE };
 
   return sdk.messages
@@ -468,8 +598,28 @@ export const fetchMoreMessages = (txId, config) => (dispatch, getState, sdk) => 
 /////////////////
 const sendMessagePayloadCreator = (
   { txId, message, config },
-  { dispatch, rejectWithValue, extra: sdk }
+  { dispatch, rejectWithValue, extra: sdk, getState }
 ) => {
+  const token = getStoredJwt();
+  const backendContext = token ? getBackendThreadContext(getState(), txId) : null;
+
+  if (token && backendContext) {
+    return sendMessageBackend(token, {
+      recipientId: backendContext.recipientId,
+      content: message,
+      transactionId: backendContext.transactionId,
+    })
+      .then(response => {
+        const messageId = response?.id;
+        return dispatch(fetchMessagesThunk({ txId, page: 1, config }))
+          .then(() => messageId)
+          .catch(() => messageId);
+      })
+      .catch(e => {
+        return rejectWithValue(storableError(e));
+      });
+  }
+
   return sdk.messages
     .send({ transactionId: txId, content: message })
     .then(response => {
