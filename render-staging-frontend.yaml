@@ -1,0 +1,35 @@
+################################################################################
+# Render Blueprint – Guzzle Commerce Frontend (STAGING/DEV)
+#
+# Deploys frontend from a dev/staging branch to a separate Render service.
+# Points to the staging backend automatically.
+#
+# Usage:
+#   Render Dashboard → New → Blueprint → select render-staging-frontend.yaml
+#
+################################################################################
+
+services:
+  - type: web
+    name: guzzle-commerce-frontend-staging
+    runtime: node
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    branch: frontend-dev  # 🎯 Deploy from frontend-dev branch only
+
+    envVars:
+      - key: NODE_ENV
+        value: development
+
+      - key: REACT_APP_CUSTOM_BACKEND_URL
+        value: https://guzzle-commerce-backend-staging.onrender.com
+
+      - key: REACT_APP_MARKETPLACE_ROOT_URL
+        value: https://guzzle-commerce-frontend-staging.onrender.com
+
+      # Add any other frontend env vars you use (Sentry DSN, etc.)
+      - key: REACT_APP_ENV
+        value: staging

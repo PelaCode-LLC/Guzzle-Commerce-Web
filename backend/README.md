@@ -7,9 +7,9 @@ A complete backend API for a marketplace application built with Node.js, Express
 - ✅ User authentication (register, login) with JWT
 - ✅ User profile management
 - ✅ Listings (CRUD operations with search/filtering)
+- ✅ Messaging (inbox + threads + send/read)
 - ✅ PostgreSQL database with proper schema
 - 🚧 Transactions (in progress)
-- 🚧 Messaging (in progress)
 - 🚧 Stripe payment integration (in progress)
 - 🚧 Reviews & ratings (in progress)
 
@@ -103,6 +103,16 @@ For managed hosting and DNS setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 - `POST /api/listings` - Create new listing (requires auth)
 - `PUT /api/listings/:id` - Update listing (requires auth)
 - `DELETE /api/listings/:id` - Delete listing (requires auth)
+
+### Messages
+
+- `GET /api/messages` - List inbox conversations for current user (requires auth)
+  - Query params: `limit`, `offset`
+- `GET /api/messages/thread/:otherUserId` - Get message thread with user (requires auth)
+  - Query params: `transactionId`, `limit`, `offset`
+- `POST /api/messages` - Send a message (requires auth)
+  - Body: `recipientId`, `content`, optional `transactionId`
+- `PATCH /api/messages/:messageId/read` - Mark a message as read (requires auth)
 
 ### Health Check
 

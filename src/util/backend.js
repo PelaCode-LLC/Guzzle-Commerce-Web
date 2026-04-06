@@ -136,6 +136,86 @@ export const searchOwnListingsBackend = async (token, params) => {
   return handleResponse(res);
 };
 
+export const fetchInboxBackend = async (token, params = {}) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, String(value));
+    }
+  });
+
+  const url = `${base}/api/messages${query.toString() ? `?${query.toString()}` : ''}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return handleResponse(res);
+};
+
+export const fetchMessageThreadBackend = async (
+  token,
+  { otherUserId, transactionId, limit, offset } = {}
+) => {
+  if (!otherUserId) {
+    throw new Error('otherUserId is required to fetch message thread');
+  }
+
+  const query = new URLSearchParams();
+  if (transactionId !== undefined && transactionId !== null && transactionId !== '') {
+    query.set('transactionId', String(transactionId));
+  }
+  if (limit !== undefined && limit !== null && limit !== '') {
+    query.set('limit', String(limit));
+  }
+  if (offset !== undefined && offset !== null && offset !== '') {
+    query.set('offset', String(offset));
+  }
+
+  const url = `${base}/api/messages/thread/${otherUserId}${
+    query.toString() ? `?${query.toString()}` : ''
+  }`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return handleResponse(res);
+};
+
+export const sendMessageBackend = async (token, { recipientId, content, transactionId } = {}) => {
+  const res = await fetch(`${base}/api/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ recipientId, content, transactionId }),
+  });
+
+  return handleResponse(res);
+};
+
+export const markMessageReadBackend = async (token, messageId) => {
+  if (!messageId) {
+    throw new Error('messageId is required to mark a message as read');
+  }
+
+  const res = await fetch(`${base}/api/messages/${messageId}/read`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return handleResponse(res);
+};
+
 export const fetchListingByIdBackend = async listingId => {
   const res = await fetch(`${base}/api/listings/${listingId}`, { method: 'GET' });
   return handleResponse(res);
