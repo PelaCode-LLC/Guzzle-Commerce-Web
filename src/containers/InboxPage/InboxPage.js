@@ -10,7 +10,6 @@ import { useRouteConfiguration } from '../../context/routeConfigurationContext';
 import { FormattedMessage, intlShape, useIntl } from '../../util/reactIntl';
 import { parse } from '../../util/urlHelpers';
 import { formatDateWithProximity } from '../../util/dates';
-import { getCurrentUserTypeRoles } from '../../util/userHelpers';
 import {
   fetchInboxBackend,
   fetchMessageThreadBackend,
@@ -50,7 +49,6 @@ import {
   NotificationBadge,
   Page,
   PaginationLinks,
-  TabNav,
   IconSpinner,
   TimeRange,
   UserDisplayName,
@@ -380,8 +378,6 @@ export const InboxPageComponent = props => {
     fetchOrdersOrSalesError,
     pagination,
     params,
-    providerNotificationCount = 0,
-    customerNotificationCount = 0,
     scrollingDisabled,
     transactions,
   } = props;
@@ -391,16 +387,9 @@ export const InboxPageComponent = props => {
     return <NotFoundPage staticContext={props.staticContext} />;
   }
 
-  const { customer: isCustomerUserType, provider: isProviderUserType } = getCurrentUserTypeRoles(
-    config,
-    currentUser
-  );
-
   const isOrders = tab === 'orders';
   const hasNoResults = !fetchInProgress && transactions.length === 0 && !fetchOrdersOrSalesError;
-  const ordersTitle = intl.formatMessage({ id: 'InboxPage.ordersTitle' });
-  const salesTitle = intl.formatMessage({ id: 'InboxPage.salesTitle' });
-  const title = isOrders ? ordersTitle : salesTitle;
+  const title = intl.formatMessage({ id: 'InboxPage.title' });
   const search = parse(location.search);
   const token = getStoredJwt();
   const isBackendInboxMode = !!token;
@@ -590,48 +579,6 @@ export const InboxPageComponent = props => {
 
   const hasBackendConversations = !backendFetchInProgress && backendConversations.length > 0;
 
-  const ordersTabMaybe = isCustomerUserType
-    ? [
-        {
-          text: (
-            <span>
-              <FormattedMessage id="InboxPage.ordersTabTitle" />
-              {customerNotificationCount > 0 ? (
-                <NotificationBadge count={customerNotificationCount} />
-              ) : null}
-            </span>
-          ),
-          selected: isOrders,
-          linkProps: {
-            name: 'InboxPage',
-            params: { tab: 'orders' },
-          },
-        },
-      ]
-    : [];
-
-  const salesTabMaybe = isProviderUserType
-    ? [
-        {
-          text: (
-            <span>
-              <FormattedMessage id="InboxPage.salesTabTitle" />
-              {providerNotificationCount > 0 ? (
-                <NotificationBadge count={providerNotificationCount} />
-              ) : null}
-            </span>
-          ),
-          selected: !isOrders,
-          linkProps: {
-            name: 'InboxPage',
-            params: { tab: 'sales' },
-          },
-        },
-      ]
-    : [];
-
-  const tabs = [...ordersTabMaybe, ...salesTabMaybe];
-
   return (
     <Page title={title} scrollingDisabled={scrollingDisabled}>
       <LayoutSideNavigation
@@ -647,12 +594,6 @@ export const InboxPageComponent = props => {
             <H2 as="h1" className={css.title}>
               <FormattedMessage id="InboxPage.title" />
             </H2>
-            <TabNav
-              rootClassName={css.tabs}
-              tabRootClassName={css.tab}
-              tabs={tabs}
-              ariaLabel={intl.formatMessage({ id: 'InboxPage.screenreader.sidenav' })}
-            />{' '}
           </>
         }
         footer={<FooterContainer />}
@@ -772,18 +713,12 @@ export const InboxPageComponent = props => {
 
 const mapStateToProps = state => {
   const { fetchInProgress, fetchOrdersOrSalesError, pagination, transactionRefs } = state.InboxPage;
-  const {
-    currentUser,
-    currentUserSaleNotificationCount,
-    currentUserOrderNotificationCount,
-  } = state.user;
+  const { currentUser } = state.user;
   return {
     currentUser,
     fetchInProgress,
     fetchOrdersOrSalesError,
     pagination,
-    providerNotificationCount: currentUserSaleNotificationCount,
-    customerNotificationCount: currentUserOrderNotificationCount,
     scrollingDisabled: isScrollingDisabled(state),
     transactions: getMarketplaceEntities(state, transactionRefs),
   };
