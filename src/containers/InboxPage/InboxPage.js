@@ -675,16 +675,18 @@ export const InboxPageComponent = props => {
                     </div>
                   )}
                 </div>
-                <SendMessageForm
-                  formId="InboxPage.directMessage"
-                  messagePlaceholder={intl.formatMessage(
-                    { id: 'InboxPage.messagePlaceholder' },
-                    { otherUserName: toDisplayName(selectedConversation.otherUser) }
-                  )}
-                  onSubmit={handleBackendThreadSubmit}
-                  inProgress={backendSendInProgress}
-                  sendMessageError={backendSendError}
-                />
+                <div className={css.directThreadComposer}>
+                  <SendMessageForm
+                    formId="InboxPage.directMessage"
+                    messagePlaceholder={intl.formatMessage(
+                      { id: 'InboxPage.messagePlaceholder' },
+                      { otherUserName: toDisplayName(selectedConversation.otherUser) }
+                    )}
+                    onSubmit={handleBackendThreadSubmit}
+                    inProgress={backendSendInProgress}
+                    sendMessageError={backendSendError}
+                  />
+                </div>
               </div>
             ) : hasBackendConversations ? (
               <div className={css.directThreadEmptyState}>

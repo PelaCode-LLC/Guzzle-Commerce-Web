@@ -61,6 +61,8 @@
     width: 300px;
     min-width: 300px;
     max-width: 300px;
+    height: calc(100vh - var(--topbarHeightDesktop));
+    overflow: hidden;
     border-right: 1px solid var(--colorGrey100);
     box-shadow: none;
     background-color: var(--colorWhite);
@@ -72,12 +74,14 @@
 
 .mainColumnCompact {
   @media (--viewportLarge) {
-    padding-left: 36px;
+    padding: 24px;
+    height: calc(100vh - var(--topbarHeightDesktop));
+    overflow: hidden;
     border-left: none;
   }
 
   @media (--viewportLargeWithPaddings) {
-    padding-left: 36px;
+    padding: 24px;
   }
 }
 
@@ -106,7 +110,8 @@
   width: 100%;
 
   @media (--viewportLarge) {
-    max-height: calc(100vh - 180px);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 8px;
   }
@@ -390,6 +395,16 @@
   margin: 24px 24px 0 24px;
   padding-top: 24px;
   border-top: 1px solid var(--colorGrey100);
+
+  @media (--viewportLarge) {
+    margin: 0;
+    padding-top: 0;
+    border-top: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
 }
 
 .directThreadHeading {
@@ -402,6 +417,24 @@
   flex-direction: column;
   gap: 12px;
   margin-bottom: 24px;
+
+  @media (--viewportLarge) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+}
+
+.directThreadComposer {
+  @media (--viewportLarge) {
+    position: sticky;
+    bottom: 0;
+    background-color: var(--colorWhite);
+    border-top: 1px solid var(--colorGrey100);
+    padding-top: 12px;
+    z-index: 2;
+  }
 }
 
 .directThreadMessage {
