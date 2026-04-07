@@ -101,6 +101,7 @@
 
 .sideConversationList {
   margin-top: 8px;
+  width: 100%;
 
   @media (--viewportLarge) {
     max-height: calc(100vh - 180px);
@@ -161,6 +162,7 @@
 .itemList {
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
 @keyframes loadingSpinnerFadeIn {

@@ -472,6 +472,17 @@ export const InboxPageComponent = props => {
     };
   }, [isBackendInboxMode, selectedConversationId, token]);
 
+  useEffect(() => {
+    if (!isBackendInboxMode || selectedConversationId || backendConversations.length === 0) {
+      return;
+    }
+
+    const firstConversation = backendConversations[0];
+    if (firstConversation?.otherUser?.id) {
+      handleBackendConversationSelect(firstConversation.otherUser.id);
+    }
+  }, [isBackendInboxMode, selectedConversationId, backendConversations]);
+
   const handleBackendConversationSelect = otherUserId => {
     const nextSearchParams = backendConversationSearchParams(search, otherUserId);
     const nextPath = createResourceLocatorString('InboxPage', routeConfiguration, { tab }, nextSearchParams);
