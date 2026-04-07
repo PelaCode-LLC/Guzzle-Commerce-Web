@@ -332,6 +332,97 @@
   margin: auto 24px 0 24px;
 }
 
+.directConversationButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  display: flex;
+  padding: 0;
+  cursor: pointer;
+}
+
+.directConversationButtonSelected {
+  background-color: var(--colorGrey100);
+  border-radius: 8px;
+}
+
+.directConversationContent {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.directConversationHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.directThreadPanel {
+  margin: 24px 24px 0 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--colorGrey100);
+}
+
+.directThreadHeading {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.directThreadList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.directThreadMessage {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.directThreadOwnMessage {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.directThreadAvatar {
+  flex: 0 0 auto;
+}
+
+.directThreadBubble {
+  max-width: 80%;
+  background-color: var(--colorGrey100);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.directThreadOwnBubble {
+  max-width: 80%;
+  background-color: var(--marketplaceColorLight);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.directThreadContent {
+  margin: 0 0 6px 0;
+  white-space: pre-wrap;
+}
+
+.directThreadDate {
+  composes: marketplaceTinyFontStyles from global;
+  margin: 0;
+  color: var(--colorGrey500);
+}
+
+.directThreadEmptyState {
+  margin: 24px;
+  color: var(--colorGrey500);
+}
+
 /* Transaction status affects to certain font colors and weights */
 
 .stateName {

@@ -52,6 +52,25 @@ export default inboxPageSlice.reducer;
 const loadDataPayloadCreator = ({ params, search }, { dispatch, rejectWithValue, extra: sdk }) => {
   const { tab } = params;
 
+  const localJwt = typeof window !== 'undefined' ? window.localStorage.getItem('jwt') : null;
+  const emptyResponse = {
+    data: {
+      data: [],
+      meta: {
+        page: 1,
+        perPage: INBOX_PAGE_SIZE,
+        totalItems: 0,
+        totalPages: 1,
+      },
+    },
+  };
+
+  // In custom backend JWT mode, InboxPage renders a client-side conversation list
+  // from backend message endpoints instead of Sharetribe transaction inbox data.
+  if (localJwt || !sdk?.transactions?.query) {
+    return Promise.resolve(emptyResponse);
+  }
+
   const onlyFilterValues = {
     orders: 'order',
     sales: 'sale',

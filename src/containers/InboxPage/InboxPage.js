@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useHistory } from 'react-router-dom';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
@@ -9,7 +9,15 @@ import { useRouteConfiguration } from '../../context/routeConfigurationContext';
 
 import { FormattedMessage, intlShape, useIntl } from '../../util/reactIntl';
 import { parse } from '../../util/urlHelpers';
+import { formatDateWithProximity } from '../../util/dates';
 import { getCurrentUserTypeRoles } from '../../util/userHelpers';
+import {
+  fetchInboxBackend,
+  fetchMessageThreadBackend,
+  sendMessageBackend,
+  toBackendIdFromUuid,
+  toUuidFromBackendId,
+} from '../../util/backend';
 import {
   propTypes,
   DATE_TYPE_DATE,
@@ -52,10 +60,120 @@ import {
 import TopbarContainer from '../../containers/TopbarContainer/TopbarContainer';
 import FooterContainer from '../../containers/FooterContainer/FooterContainer';
 import NotFoundPage from '../../containers/NotFoundPage/NotFoundPage';
+import SendMessageForm from '../../containers/TransactionPage/SendMessageForm/SendMessageForm';
 import InboxSearchForm from './InboxSearchForm/InboxSearchForm';
 
 import { stateDataShape, getStateData } from './InboxPage.stateData';
 import css from './InboxPage.module.css';
+
+const getStoredJwt = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem('jwt');
+};
+
+const abbreviateName = name => {
+  if (!name) {
+    return 'U';
+  }
+
+  return name
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2);
+};
+
+const toDisplayName = user => {
+  const firstName = user?.firstName || '';
+  const lastName = user?.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  return fullName || `User ${user?.id || ''}`.trim();
+};
+
+const toBackendInboxUser = user => {
+  const displayName = toDisplayName(user);
+
+  return {
+    id: { uuid: toUuidFromBackendId(user?.id || 1) },
+    type: 'user',
+    attributes: {
+      profile: {
+        displayName,
+        abbreviatedName: abbreviateName(displayName),
+      },
+      banned: false,
+      deleted: false,
+    },
+  };
+};
+
+const backendConversationSearchParams = (search, conversation) => {
+  return {
+    ...search,
+    ...(conversation ? { conversation: String(conversation) } : {}),
+  };
+};
+
+const DirectConversationItem = props => {
+  const { conversation, isSelected, onSelect, intl } = props;
+  const otherUser = toBackendInboxUser(conversation.otherUser);
+  const todayString = intl.formatMessage({ id: 'InboxPage.today' });
+  const formattedDate = formatDateWithProximity(
+    new Date(conversation.lastMessage.createdAt),
+    intl,
+    todayString
+  );
+  const itemClasses = classNames(css.directConversationButton, {
+    [css.directConversationButtonSelected]: isSelected,
+  });
+
+  return (
+    <li className={css.listItem}>
+      <button type="button" className={itemClasses} onClick={onSelect}>
+        <div className={css.itemAvatar}>
+          <Avatar user={otherUser} disableProfileLink />
+        </div>
+        <div className={css.directConversationContent}>
+          <div className={css.directConversationHeaderRow}>
+            <div className={css.itemUsername}>
+              <UserDisplayName user={otherUser} intl={intl} />
+            </div>
+            {conversation.unreadCount > 0 ? (
+              <NotificationBadge count={conversation.unreadCount} />
+            ) : null}
+          </div>
+          <div className={css.itemTitle}>{conversation.lastMessage.content}</div>
+          <div className={css.itemDetails}>{formattedDate}</div>
+        </div>
+      </button>
+    </li>
+  );
+};
+
+const DirectThreadMessage = props => {
+  const { message, isOwn, intl } = props;
+  const sender = toBackendInboxUser(message.sender);
+  const todayString = intl.formatMessage({ id: 'InboxPage.today' });
+  const formattedDate = formatDateWithProximity(new Date(message.createdAt), intl, todayString);
+
+  return (
+    <div className={isOwn ? css.directThreadOwnMessage : css.directThreadMessage}>
+      {!isOwn ? (
+        <div className={css.directThreadAvatar}>
+          <Avatar user={sender} disableProfileLink />
+        </div>
+      ) : null}
+      <div className={isOwn ? css.directThreadOwnBubble : css.directThreadBubble}>
+        <p className={css.directThreadContent}>{message.content}</p>
+        <p className={css.directThreadDate}>{formattedDate}</p>
+      </div>
+    </div>
+  );
+};
 
 // Check if the transaction line-items use booking-related units
 const getUnitLineItem = lineItems => {
@@ -284,6 +402,141 @@ export const InboxPageComponent = props => {
   const salesTitle = intl.formatMessage({ id: 'InboxPage.salesTitle' });
   const title = isOrders ? ordersTitle : salesTitle;
   const search = parse(location.search);
+  const token = getStoredJwt();
+  const isBackendInboxMode = !!token;
+  const [backendConversations, setBackendConversations] = useState([]);
+  const [backendThreadMessages, setBackendThreadMessages] = useState([]);
+  const [backendFetchError, setBackendFetchError] = useState(null);
+  const [backendFetchInProgress, setBackendFetchInProgress] = useState(false);
+  const [backendThreadInProgress, setBackendThreadInProgress] = useState(false);
+  const [backendSendInProgress, setBackendSendInProgress] = useState(false);
+  const [backendSendError, setBackendSendError] = useState(null);
+  const selectedConversationId = Number(search.conversation);
+  const selectedConversation = backendConversations.find(
+    conversation => conversation.otherUser.id === selectedConversationId
+  );
+  const currentUserBackendId = currentUser?.id ? toBackendIdFromUuid(currentUser.id) : null;
+
+  useEffect(() => {
+    if (!isBackendInboxMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+    setBackendFetchInProgress(true);
+    setBackendFetchError(null);
+
+    fetchInboxBackend(token, {})
+      .then(response => {
+        if (isMounted) {
+          setBackendConversations(response?.conversations || []);
+        }
+      })
+      .catch(error => {
+        if (isMounted) {
+          setBackendFetchError(error);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setBackendFetchInProgress(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBackendInboxMode, token]);
+
+  useEffect(() => {
+    if (!isBackendInboxMode || !selectedConversationId) {
+      setBackendThreadMessages([]);
+      return undefined;
+    }
+
+    let isMounted = true;
+    setBackendThreadInProgress(true);
+
+    fetchMessageThreadBackend(token, {
+      otherUserId: selectedConversationId,
+      limit: 100,
+      offset: 0,
+    })
+      .then(response => {
+        if (isMounted) {
+          setBackendThreadMessages(response?.messages || []);
+        }
+      })
+      .catch(error => {
+        if (isMounted) {
+          setBackendFetchError(error);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setBackendThreadInProgress(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBackendInboxMode, selectedConversationId, token]);
+
+  const handleBackendConversationSelect = otherUserId => {
+    const nextSearchParams = backendConversationSearchParams(search, otherUserId);
+    const nextPath = createResourceLocatorString('InboxPage', routeConfiguration, { tab }, nextSearchParams);
+    history.push(nextPath);
+  };
+
+  const refreshBackendInbox = () => {
+    return fetchInboxBackend(token, {}).then(response => {
+      setBackendConversations(response?.conversations || []);
+      return response;
+    });
+  };
+
+  const refreshBackendThread = otherUserId => {
+    return fetchMessageThreadBackend(token, {
+      otherUserId,
+      limit: 100,
+      offset: 0,
+    }).then(response => {
+      setBackendThreadMessages(response?.messages || []);
+      return response;
+    });
+  };
+
+  const handleBackendThreadSubmit = (values, formApi) => {
+    const content = values?.message?.trim();
+    if (!selectedConversation || !content) {
+      return Promise.resolve();
+    }
+
+    setBackendSendInProgress(true);
+    setBackendSendError(null);
+
+    return sendMessageBackend(token, {
+      recipientId: selectedConversation.otherUser.id,
+      content,
+      transactionId: null,
+    })
+      .then(() => Promise.all([
+        refreshBackendInbox(),
+        refreshBackendThread(selectedConversation.otherUser.id),
+      ]))
+      .then(() => {
+        if (formApi?.reset) {
+          formApi.reset();
+        }
+      })
+      .catch(error => {
+        setBackendSendError(error);
+      })
+      .finally(() => {
+        setBackendSendInProgress(false);
+      });
+  };
 
   const pickType = lt => conf => conf.listingType === lt;
   const findListingTypeConfig = publicData => {
@@ -334,6 +587,8 @@ export const InboxPageComponent = props => {
   };
   const hasTransactions =
     !fetchInProgress && hasOrderOrSaleTransactions(transactions, isOrders, currentUser);
+
+  const hasBackendConversations = !backendFetchInProgress && backendConversations.length > 0;
 
   const ordersTabMaybe = isCustomerUserType
     ? [
@@ -410,28 +665,98 @@ export const InboxPageComponent = props => {
           routeConfiguration={routeConfiguration}
           history={history}
         />
-        {fetchOrdersOrSalesError ? (
+        {fetchOrdersOrSalesError || backendFetchError ? (
           <p className={css.error}>
             <FormattedMessage id="InboxPage.fetchFailed" />
           </p>
         ) : null}
-        <ul className={css.itemList}>
-          {!fetchInProgress ? (
-            transactions.map(toTxItem)
-          ) : (
-            <li className={css.listItemsLoading}>
-              <IconSpinner />
-            </li>
-          )}
-          {hasNoResults ? (
-            <li key="noResults" className={css.noResults}>
-              <FormattedMessage
-                id={isOrders ? 'InboxPage.noOrdersFound' : 'InboxPage.noSalesFound'}
-              />
-            </li>
-          ) : null}
-        </ul>
-        {hasTransactions && pagination && pagination.totalPages > 1 ? (
+        {isBackendInboxMode ? (
+          <>
+            <ul className={css.itemList}>
+              {!backendFetchInProgress ? (
+                backendConversations.map(conversation => (
+                  <DirectConversationItem
+                    key={conversation.otherUser.id}
+                    conversation={conversation}
+                    isSelected={selectedConversationId === conversation.otherUser.id}
+                    onSelect={() => handleBackendConversationSelect(conversation.otherUser.id)}
+                    intl={intl}
+                  />
+                ))
+              ) : (
+                <li className={css.listItemsLoading}>
+                  <IconSpinner />
+                </li>
+              )}
+              {!hasBackendConversations && !backendFetchInProgress ? (
+                <li key="noResults" className={css.noResults}>
+                  <FormattedMessage id="InboxPage.noMessagesFound" />
+                </li>
+              ) : null}
+            </ul>
+
+            {selectedConversation ? (
+              <div className={css.directThreadPanel}>
+                <h3 className={css.directThreadHeading}>
+                  <FormattedMessage
+                    id="InboxPage.conversationWith"
+                    values={{ otherUserName: toDisplayName(selectedConversation.otherUser) }}
+                  />
+                </h3>
+                <div className={css.directThreadList}>
+                  {!backendThreadInProgress ? (
+                    backendThreadMessages.map(message => (
+                      <DirectThreadMessage
+                        key={message.id}
+                        message={message}
+                        isOwn={message.sender?.id === currentUserBackendId}
+                        intl={intl}
+                      />
+                    ))
+                  ) : (
+                    <div className={css.listItemsLoading}>
+                      <IconSpinner />
+                    </div>
+                  )}
+                </div>
+                <SendMessageForm
+                  formId="InboxPage.directMessage"
+                  messagePlaceholder={intl.formatMessage(
+                    { id: 'InboxPage.messagePlaceholder' },
+                    { otherUserName: toDisplayName(selectedConversation.otherUser) }
+                  )}
+                  onSubmit={handleBackendThreadSubmit}
+                  inProgress={backendSendInProgress}
+                  sendMessageError={backendSendError}
+                />
+              </div>
+            ) : hasBackendConversations ? (
+              <div className={css.directThreadEmptyState}>
+                <FormattedMessage id="InboxPage.selectConversation" />
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <ul className={css.itemList}>
+              {!fetchInProgress ? (
+                transactions.map(toTxItem)
+              ) : (
+                <li className={css.listItemsLoading}>
+                  <IconSpinner />
+                </li>
+              )}
+              {hasNoResults ? (
+                <li key="noResults" className={css.noResults}>
+                  <FormattedMessage
+                    id={isOrders ? 'InboxPage.noOrdersFound' : 'InboxPage.noSalesFound'}
+                  />
+                </li>
+              ) : null}
+            </ul>
+          </>
+        )}
+        {!isBackendInboxMode && hasTransactions && pagination && pagination.totalPages > 1 ? (
           <PaginationLinks
             className={css.pagination}
             pageName="InboxPage"
