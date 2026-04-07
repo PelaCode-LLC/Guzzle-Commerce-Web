@@ -55,15 +55,27 @@
 
   @media (--viewportLarge) {
     flex-wrap: unset;
-    padding: 40px 0 82px 36px;
+    padding: 40px 16px 82px 36px;
     flex-direction: column;
     justify-content: flex-start;
+    width: 260px;
     border: none;
     box-shadow: none;
     background-color: transparent;
   }
   @media (--viewportLargeWithPaddings) {
-    padding: 40px 0 82px calc((100% - 1056px) / 2);
+    padding: 40px 16px 82px calc((100% - 1056px) / 2);
+  }
+}
+
+.mainColumnCompact {
+  @media (--viewportLarge) {
+    padding-left: 36px;
+    border-left: none;
+  }
+
+  @media (--viewportLargeWithPaddings) {
+    padding-left: 36px;
   }
 }
 
