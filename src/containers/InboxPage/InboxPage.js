@@ -595,18 +595,44 @@ export const InboxPageComponent = props => {
             <H2 as="h1" className={css.title}>
               <FormattedMessage id="InboxPage.title" />
             </H2>
+            {isBackendInboxMode ? (
+              <ul className={classNames(css.itemList, css.sideConversationList)}>
+                {!backendFetchInProgress ? (
+                  backendConversations.map(conversation => (
+                    <DirectConversationItem
+                      key={conversation.otherUser.id}
+                      conversation={conversation}
+                      isSelected={selectedConversationId === conversation.otherUser.id}
+                      onSelect={() => handleBackendConversationSelect(conversation.otherUser.id)}
+                      intl={intl}
+                    />
+                  ))
+                ) : (
+                  <li className={css.listItemsLoading}>
+                    <IconSpinner />
+                  </li>
+                )}
+                {!hasBackendConversations && !backendFetchInProgress ? (
+                  <li key="noResults" className={css.noResults}>
+                    <FormattedMessage id="InboxPage.noMessagesFound" />
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
           </>
         }
         footer={<FooterContainer />}
       >
-        <InboxSearchForm
-          onSubmit={() => {}}
-          onSelect={handleSortSelect(tab, routeConfiguration, history)}
-          intl={intl}
-          tab={tab}
-          routeConfiguration={routeConfiguration}
-          history={history}
-        />
+        {!isBackendInboxMode ? (
+          <InboxSearchForm
+            onSubmit={() => {}}
+            onSelect={handleSortSelect(tab, routeConfiguration, history)}
+            intl={intl}
+            tab={tab}
+            routeConfiguration={routeConfiguration}
+            history={history}
+          />
+        ) : null}
         {fetchOrdersOrSalesError || backendFetchError ? (
           <p className={css.error}>
             <FormattedMessage id="InboxPage.fetchFailed" />
@@ -614,29 +640,6 @@ export const InboxPageComponent = props => {
         ) : null}
         {isBackendInboxMode ? (
           <>
-            <ul className={css.itemList}>
-              {!backendFetchInProgress ? (
-                backendConversations.map(conversation => (
-                  <DirectConversationItem
-                    key={conversation.otherUser.id}
-                    conversation={conversation}
-                    isSelected={selectedConversationId === conversation.otherUser.id}
-                    onSelect={() => handleBackendConversationSelect(conversation.otherUser.id)}
-                    intl={intl}
-                  />
-                ))
-              ) : (
-                <li className={css.listItemsLoading}>
-                  <IconSpinner />
-                </li>
-              )}
-              {!hasBackendConversations && !backendFetchInProgress ? (
-                <li key="noResults" className={css.noResults}>
-                  <FormattedMessage id="InboxPage.noMessagesFound" />
-                </li>
-              ) : null}
-            </ul>
-
             {selectedConversation ? (
               <div className={css.directThreadPanel}>
                 <h3 className={css.directThreadHeading}>
