@@ -583,6 +583,7 @@ export const InboxPageComponent = props => {
     <Page title={title} scrollingDisabled={scrollingDisabled}>
       <LayoutSideNavigation
         sideNavClassName={css.navigation}
+        mainColumnClassName={css.mainColumnCompact}
         topbar={
           <TopbarContainer
             mobileRootClassName={css.mobileTopbar}
