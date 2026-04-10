@@ -9,9 +9,9 @@ import { useRouteConfiguration } from '../../context/routeConfigurationContext';
 
 import { FormattedMessage, intlShape, useIntl } from '../../util/reactIntl';
 import { parse } from '../../util/urlHelpers';
-import { formatDateWithProximity } from '../../util/dates';
 import IconInquiry from '../../components/IconInquiry/IconInquiry';
 import {
+  deleteConversationBackend,
   fetchInboxBackend,
   fetchMessageThreadBackend,
   sendMessageBackend,
@@ -50,6 +50,8 @@ import {
   NotificationBadge,
   Page,
   PaginationLinks,
+  InlineTextButton,
+  IconDelete,
   IconSpinner,
   TimeRange,
   UserDisplayName,
@@ -143,10 +145,12 @@ const formatRelativeTime = (date, intl) => {
   return intl.formatDate(date, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' });
 };
 
-const backendConversationSearchParams = (search, conversation) => {
+const backendConversationSearchParams = (search, conversationKey) => {
+  const { conversation, ...restSearch } = search;
+
   return {
-    ...search,
-    ...(conversation ? { conversation: String(conversation) } : {}),
+    ...restSearch,
+    ...(conversationKey ? { conversation: String(conversationKey) } : {}),
   };
 };
 
@@ -157,6 +161,7 @@ const DirectConversationItem = props => {
     new Date(conversation.lastMessage.createdAt),
     intl
   );
+  const listingTitle = conversation.listing?.title;
   const itemClasses = classNames(css.directConversationButton, {
     [css.directConversationButtonSelected]: isSelected,
   });
@@ -176,8 +181,15 @@ const DirectConversationItem = props => {
               <NotificationBadge count={conversation.unreadCount} />
             ) : null}
           </div>
-          <div className={css.itemTitle}>{conversation.lastMessage.content}</div>
-          <div className={css.itemDetails}>{formattedDate}</div>
+          <div className={css.itemTitle}>{listingTitle || conversation.lastMessage.content}</div>
+          <div className={css.directConversationMetaRow}>
+            <div className={css.itemDetails}>
+              {listingTitle ? conversation.lastMessage.content : formattedDate}
+            </div>
+            {listingTitle ? (
+              <div className={css.directConversationTimestamp}>{formattedDate}</div>
+            ) : null}
+          </div>
         </div>
       </button>
     </li>
@@ -458,6 +470,7 @@ export const InboxPageComponent = props => {
   const [backendFetchError, setBackendFetchError] = useState(null);
   const [backendFetchInProgress, setBackendFetchInProgress] = useState(false);
   const [backendThreadInProgress, setBackendThreadInProgress] = useState(false);
+  const [backendDeleteInProgress, setBackendDeleteInProgress] = useState(false);
   const [backendSendInProgress, setBackendSendInProgress] = useState(false);
   const [backendSendError, setBackendSendError] = useState(null);
   const threadScrollRef = useRef(null);
@@ -467,10 +480,14 @@ export const InboxPageComponent = props => {
   const title = totalUnread > 0
     ? `(${totalUnread}) ${intl.formatMessage({ id: 'InboxPage.title' })}`
     : intl.formatMessage({ id: 'InboxPage.title' });
-  const selectedConversationId = Number(search.conversation);
-  const selectedConversation = backendConversations.find(
-    conversation => conversation.otherUser.id === selectedConversationId
-  );
+  const selectedConversationKey = search.conversation || '';
+  const legacySelectedConversationId = Number(search.conversation);
+  const selectedConversation =
+    backendConversations.find(conversation => conversation.key === selectedConversationKey) ||
+    backendConversations.find(
+      conversation =>
+        conversation.scopeType === 'direct' && conversation.otherUser.id === legacySelectedConversationId
+    );
   const currentUserBackendId = currentUser?.id ? toBackendIdFromUuid(currentUser.id) : null;
 
   useEffect(() => {
@@ -505,7 +522,7 @@ export const InboxPageComponent = props => {
   }, [isBackendInboxMode, token]);
 
   useEffect(() => {
-    if (!isBackendInboxMode || !selectedConversationId) {
+    if (!isBackendInboxMode || !selectedConversation) {
       setBackendThreadMessages([]);
       return undefined;
     }
@@ -514,7 +531,9 @@ export const InboxPageComponent = props => {
     setBackendThreadInProgress(true);
 
     fetchMessageThreadBackend(token, {
-      otherUserId: selectedConversationId,
+      otherUserId: selectedConversation.otherUser.id,
+      transactionId: selectedConversation.transactionId,
+      listingId: selectedConversation.listing?.id,
       limit: 100,
       offset: 0,
     })
@@ -537,18 +556,18 @@ export const InboxPageComponent = props => {
     return () => {
       isMounted = false;
     };
-  }, [isBackendInboxMode, selectedConversationId, token]);
+  }, [isBackendInboxMode, selectedConversation, token]);
 
   useEffect(() => {
-    if (!isBackendInboxMode || selectedConversationId || backendConversations.length === 0) {
+    if (!isBackendInboxMode || selectedConversation || backendConversations.length === 0) {
       return;
     }
 
     const firstConversation = backendConversations[0];
-    if (firstConversation?.otherUser?.id) {
-      handleBackendConversationSelect(firstConversation.otherUser.id);
+    if (firstConversation?.key) {
+      handleBackendConversationSelect(firstConversation);
     }
-  }, [isBackendInboxMode, selectedConversationId, backendConversations]);
+  }, [isBackendInboxMode, selectedConversation, backendConversations]);
 
   // Auto-scroll thread list to the bottom whenever messages change
   useEffect(() => {
@@ -557,8 +576,8 @@ export const InboxPageComponent = props => {
     }
   }, [backendThreadMessages]);
 
-  const handleBackendConversationSelect = otherUserId => {
-    const nextSearchParams = backendConversationSearchParams(search, otherUserId);
+  const handleBackendConversationSelect = conversation => {
+    const nextSearchParams = backendConversationSearchParams(search, conversation?.key);
     const nextPath = createResourceLocatorString('InboxPage', routeConfiguration, { tab }, nextSearchParams);
     history.push(nextPath);
   };
@@ -570,9 +589,11 @@ export const InboxPageComponent = props => {
     });
   };
 
-  const refreshBackendThread = otherUserId => {
+  const refreshBackendThread = conversation => {
     return fetchMessageThreadBackend(token, {
-      otherUserId,
+      otherUserId: conversation.otherUser.id,
+      transactionId: conversation.transactionId,
+      listingId: conversation.listing?.id,
       limit: 100,
       offset: 0,
     }).then(response => {
@@ -593,11 +614,12 @@ export const InboxPageComponent = props => {
     return sendMessageBackend(token, {
       recipientId: selectedConversation.otherUser.id,
       content,
-      transactionId: null,
+      transactionId: selectedConversation.transactionId,
+      listingId: selectedConversation.listing?.id,
     })
       .then(() => Promise.all([
         refreshBackendInbox(),
-        refreshBackendThread(selectedConversation.otherUser.id),
+        refreshBackendThread(selectedConversation),
       ]))
       .then(() => {
         if (formApi?.reset) {
@@ -609,6 +631,57 @@ export const InboxPageComponent = props => {
       })
       .finally(() => {
         setBackendSendInProgress(false);
+      });
+  };
+
+  const clearBackendConversationSelection = () => {
+    const nextSearchParams = backendConversationSearchParams(search, null);
+    const nextPath = createResourceLocatorString('InboxPage', routeConfiguration, { tab }, nextSearchParams);
+    history.push(nextPath);
+  };
+
+  const handleBackendConversationDelete = () => {
+    if (!selectedConversation || backendDeleteInProgress) {
+      return Promise.resolve();
+    }
+
+    const confirmed =
+      typeof window === 'undefined'
+        ? true
+        : window.confirm(
+            intl.formatMessage({ id: 'InboxPage.deleteConversationConfirm' })
+          );
+
+    if (!confirmed) {
+      return Promise.resolve();
+    }
+
+    setBackendDeleteInProgress(true);
+    setBackendFetchError(null);
+
+    return deleteConversationBackend(token, {
+      otherUserId: selectedConversation.otherUser.id,
+      transactionId: selectedConversation.transactionId,
+      listingId: selectedConversation.listing?.id,
+    })
+      .then(() => refreshBackendInbox())
+      .then(response => {
+        const remainingConversations = response?.conversations || [];
+        const nextConversation = remainingConversations[0];
+
+        setBackendThreadMessages([]);
+
+        if (nextConversation?.key) {
+          handleBackendConversationSelect(nextConversation);
+        } else {
+          clearBackendConversationSelection();
+        }
+      })
+      .catch(error => {
+        setBackendFetchError(error);
+      })
+      .finally(() => {
+        setBackendDeleteInProgress(false);
       });
   };
 
@@ -685,10 +758,10 @@ export const InboxPageComponent = props => {
                 {!backendFetchInProgress ? (
                   backendConversations.map(conversation => (
                     <DirectConversationItem
-                      key={conversation.otherUser.id}
+                      key={conversation.key}
                       conversation={conversation}
-                      isSelected={selectedConversationId === conversation.otherUser.id}
-                      onSelect={() => handleBackendConversationSelect(conversation.otherUser.id)}
+                      isSelected={selectedConversation?.key === conversation.key}
+                      onSelect={() => handleBackendConversationSelect(conversation)}
                       intl={intl}
                     />
                   ))
@@ -727,12 +800,29 @@ export const InboxPageComponent = props => {
           <>
             {selectedConversation ? (
               <div className={css.directThreadPanel}>
-                <h3 className={css.directThreadHeading}>
-                  <FormattedMessage
-                    id="InboxPage.conversationWith"
-                    values={{ otherUserName: toDisplayName(selectedConversation.otherUser) }}
-                  />
-                </h3>
+                <div className={css.directThreadHeaderRow}>
+                  <h3 className={css.directThreadHeading}>
+                    <FormattedMessage
+                      id={
+                        selectedConversation.listing?.title
+                          ? 'InboxPage.conversationWithListing'
+                          : 'InboxPage.conversationWith'
+                      }
+                      values={{
+                        otherUserName: toDisplayName(selectedConversation.otherUser),
+                        listingTitle: selectedConversation.listing?.title,
+                      }}
+                    />
+                  </h3>
+                  <InlineTextButton
+                    className={css.directThreadDeleteButton}
+                    onClick={handleBackendConversationDelete}
+                    disabled={backendDeleteInProgress}
+                  >
+                    <IconDelete />
+                    <FormattedMessage id="InboxPage.deleteConversation" />
+                  </InlineTextButton>
+                </div>
                 <div className={css.directThreadList} ref={threadScrollRef}>
                   {!backendThreadInProgress ? (
                     backendThreadMessages.length > 0 ? (

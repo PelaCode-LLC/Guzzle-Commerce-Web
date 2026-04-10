@@ -5,12 +5,19 @@ const listSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(20),
   offset: Joi.number().integer().min(0).default(0),
   transactionId: Joi.number().integer().positive(),
+  listingId: Joi.number().integer().positive(),
+});
+
+const conversationScopeSchema = Joi.object({
+  transactionId: Joi.number().integer().positive(),
+  listingId: Joi.number().integer().positive(),
 });
 
 const sendMessageSchema = Joi.object({
   recipientId: Joi.number().integer().positive().required(),
   content: Joi.string().trim().min(1).max(5000).required(),
   transactionId: Joi.number().integer().positive().allow(null),
+  listingId: Joi.number().integer().positive().allow(null),
 });
 
 const toPublicUser = row => ({
@@ -19,6 +26,21 @@ const toPublicUser = row => ({
   lastName: row.last_name,
   avatarUrl: row.avatar_url,
 });
+
+const toConversationKey = (scopeType, scopeId, otherUserId) => {
+  if (scopeType === 'listing') {
+    return `listing:${scopeId}:${otherUserId}`;
+  }
+
+  if (scopeType === 'transaction') {
+    return `transaction:${scopeId}:${otherUserId}`;
+  }
+
+  return `direct:${otherUserId}`;
+};
+
+const visibleToUserSql = userIdParam =>
+  `((m.sender_id = ${userIdParam} AND m.sender_deleted_at IS NULL) OR (m.recipient_id = ${userIdParam} AND m.recipient_deleted_at IS NULL))`;
 
 const getInbox = async (req, res) => {
   const userId = req.userId;
@@ -31,12 +53,13 @@ const getInbox = async (req, res) => {
 
   try {
     const result = await pool.query(
-      `WITH ranked_messages AS (
+      `WITH scoped_messages AS (
          SELECT
            m.id,
            m.sender_id,
            m.recipient_id,
            m.transaction_id,
+           COALESCE(m.listing_id, tx.listing_id) AS listing_id,
            m.content,
            m.is_read,
            m.created_at,
@@ -44,34 +67,67 @@ const getInbox = async (req, res) => {
              WHEN m.sender_id = $1 THEN m.recipient_id
              ELSE m.sender_id
            END AS other_user_id,
-           ROW_NUMBER() OVER (
-             PARTITION BY CASE WHEN m.sender_id = $1 THEN m.recipient_id ELSE m.sender_id END
-             ORDER BY m.created_at DESC, m.id DESC
-           ) AS row_num
+           CASE
+             WHEN m.transaction_id IS NOT NULL THEN 'transaction'
+             WHEN COALESCE(m.listing_id, tx.listing_id) IS NOT NULL THEN 'listing'
+             ELSE 'direct'
+           END AS conversation_scope_type,
+           CASE
+             WHEN m.transaction_id IS NOT NULL THEN m.transaction_id
+             WHEN COALESCE(m.listing_id, tx.listing_id) IS NOT NULL THEN COALESCE(m.listing_id, tx.listing_id)
+             ELSE CASE WHEN m.sender_id = $1 THEN m.recipient_id ELSE m.sender_id END
+           END AS conversation_scope_id
          FROM messages m
-         WHERE m.sender_id = $1 OR m.recipient_id = $1
+         LEFT JOIN transactions tx ON tx.id = m.transaction_id
+         WHERE ${visibleToUserSql('$1')}
+       ),
+       ranked_messages AS (
+         SELECT
+           sm.*,
+           ROW_NUMBER() OVER (
+             PARTITION BY sm.other_user_id, sm.conversation_scope_type, sm.conversation_scope_id
+             ORDER BY sm.created_at DESC, sm.id DESC
+           ) AS row_num
+         FROM scoped_messages sm
+       ),
+       unread_counts AS (
+         SELECT
+           sm.other_user_id,
+           sm.conversation_scope_type,
+           sm.conversation_scope_id,
+           COUNT(*)::INTEGER AS unread_count
+         FROM scoped_messages sm
+         WHERE sm.sender_id = sm.other_user_id
+           AND sm.recipient_id = $1
+           AND sm.recipient_deleted_at IS NULL
+           AND sm.is_read = FALSE
+         GROUP BY sm.other_user_id, sm.conversation_scope_type, sm.conversation_scope_id
        )
        SELECT
          rm.id,
          rm.sender_id,
          rm.recipient_id,
          rm.transaction_id,
+         rm.listing_id,
          rm.content,
          rm.is_read,
          rm.created_at,
          rm.other_user_id,
+         rm.conversation_scope_type,
+         rm.conversation_scope_id,
          u.first_name,
          u.last_name,
          u.avatar_url,
-         (
-           SELECT COUNT(*)::INTEGER
-           FROM messages um
-           WHERE um.sender_id = rm.other_user_id
-             AND um.recipient_id = $1
-             AND um.is_read = FALSE
-         ) AS unread_count
+         COALESCE(uc.unread_count, 0) AS unread_count,
+         l.title AS listing_title,
+         l.image_url AS listing_image_url
        FROM ranked_messages rm
        JOIN users u ON u.id = rm.other_user_id
+       LEFT JOIN unread_counts uc
+         ON uc.other_user_id = rm.other_user_id
+        AND uc.conversation_scope_type = rm.conversation_scope_type
+        AND uc.conversation_scope_id = rm.conversation_scope_id
+       LEFT JOIN listings l ON l.id = rm.listing_id
        WHERE rm.row_num = 1
        ORDER BY rm.created_at DESC, rm.id DESC
        LIMIT $2 OFFSET $3`,
@@ -83,22 +139,43 @@ const getInbox = async (req, res) => {
        FROM (
          SELECT
            CASE
-             WHEN sender_id = $1 THEN recipient_id
-             ELSE sender_id
-           END AS other_user_id
-         FROM messages
-         WHERE sender_id = $1 OR recipient_id = $1
-         GROUP BY other_user_id
+             WHEN m.sender_id = $1 THEN m.recipient_id
+             ELSE m.sender_id
+           END AS other_user_id,
+           CASE
+             WHEN m.transaction_id IS NOT NULL THEN 'transaction'
+             WHEN COALESCE(m.listing_id, tx.listing_id) IS NOT NULL THEN 'listing'
+             ELSE 'direct'
+           END AS conversation_scope_type,
+           CASE
+             WHEN m.transaction_id IS NOT NULL THEN m.transaction_id
+             WHEN COALESCE(m.listing_id, tx.listing_id) IS NOT NULL THEN COALESCE(m.listing_id, tx.listing_id)
+             ELSE CASE WHEN m.sender_id = $1 THEN m.recipient_id ELSE m.sender_id END
+           END AS conversation_scope_id
+         FROM messages m
+         LEFT JOIN transactions tx ON tx.id = m.transaction_id
+         WHERE ${visibleToUserSql('$1')}
+         GROUP BY other_user_id, conversation_scope_type, conversation_scope_id
        ) conversation_count`,
       [userId]
     );
 
     const conversations = result.rows.map(row => ({
+      key: toConversationKey(
+        row.conversation_scope_type,
+        row.conversation_scope_id,
+        row.other_user_id
+      ),
+      scopeType: row.conversation_scope_type,
+      scopeId: row.conversation_scope_id,
+      transactionId:
+        row.conversation_scope_type === 'transaction' ? row.conversation_scope_id : null,
       lastMessage: {
         id: row.id,
         senderId: row.sender_id,
         recipientId: row.recipient_id,
         transactionId: row.transaction_id,
+        listingId: row.listing_id,
         content: row.content,
         isRead: row.is_read,
         createdAt: row.created_at,
@@ -109,6 +186,13 @@ const getInbox = async (req, res) => {
         lastName: row.last_name,
         avatarUrl: row.avatar_url,
       },
+      listing: row.listing_id
+        ? {
+            id: row.listing_id,
+            title: row.listing_title,
+            imageUrl: row.listing_image_url,
+          }
+        : null,
       unreadCount: row.unread_count,
     }));
 
@@ -137,14 +221,21 @@ const getThread = async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { limit, offset, transactionId } = value;
+  const { limit, offset, transactionId, listingId } = value;
   const params = [userId, otherUserId];
-  let txFilterSql = '';
+  const scopeFilters = [];
 
   if (transactionId) {
     params.push(transactionId);
-    txFilterSql = ` AND m.transaction_id = $${params.length}`;
+    scopeFilters.push(`m.transaction_id = $${params.length}`);
   }
+
+  if (listingId) {
+    params.push(listingId);
+    scopeFilters.push(`COALESCE(m.listing_id, tx.listing_id) = $${params.length}`);
+  }
+
+  const scopeFilterSql = scopeFilters.length > 0 ? ` AND ${scopeFilters.join(' AND ')}` : '';
 
   params.push(limit, offset);
   const limitParam = `$${params.length - 1}`;
@@ -157,6 +248,7 @@ const getThread = async (req, res) => {
          m.sender_id,
          m.recipient_id,
          m.transaction_id,
+        COALESCE(m.listing_id, tx.listing_id) AS listing_id,
          m.content,
          m.is_read,
          m.created_at,
@@ -169,47 +261,64 @@ const getThread = async (req, res) => {
          recipient.last_name AS recipient_last_name,
          recipient.avatar_url AS recipient_avatar_url
        FROM messages m
+       LEFT JOIN transactions tx ON tx.id = m.transaction_id
        JOIN users sender ON sender.id = m.sender_id
        JOIN users recipient ON recipient.id = m.recipient_id
        WHERE (
          (m.sender_id = $1 AND m.recipient_id = $2)
          OR (m.sender_id = $2 AND m.recipient_id = $1)
-       )${txFilterSql}
+       )
+         AND ${visibleToUserSql('$1')}${scopeFilterSql}
        ORDER BY m.created_at DESC, m.id DESC
        LIMIT ${limitParam} OFFSET ${offsetParam}`,
       params
     );
 
     const countParams = [userId, otherUserId];
-    let countTxFilterSql = '';
+    const countScopeFilters = [];
     if (transactionId) {
       countParams.push(transactionId);
-      countTxFilterSql = ` AND m.transaction_id = $${countParams.length}`;
+      countScopeFilters.push(`m.transaction_id = $${countParams.length}`);
     }
+    if (listingId) {
+      countParams.push(listingId);
+      countScopeFilters.push(`COALESCE(m.listing_id, tx.listing_id) = $${countParams.length}`);
+    }
+    const countScopeSql = countScopeFilters.length > 0 ? ` AND ${countScopeFilters.join(' AND ')}` : '';
 
     const countResult = await pool.query(
       `SELECT COUNT(*)::INTEGER AS count
        FROM messages m
+       LEFT JOIN transactions tx ON tx.id = m.transaction_id
        WHERE (
          (m.sender_id = $1 AND m.recipient_id = $2)
          OR (m.sender_id = $2 AND m.recipient_id = $1)
-       )${countTxFilterSql}`,
+       )
+         AND ${visibleToUserSql('$1')}${countScopeSql}`,
       countParams
     );
 
     const markReadParams = [userId, otherUserId];
-    let markReadTxFilterSql = '';
+    const markReadScopeFilters = [];
     if (transactionId) {
       markReadParams.push(transactionId);
-      markReadTxFilterSql = ` AND transaction_id = $${markReadParams.length}`;
+      markReadScopeFilters.push(`transaction_id = $${markReadParams.length}`);
     }
+    if (listingId) {
+      markReadParams.push(listingId);
+      markReadScopeFilters.push(
+        `COALESCE(listing_id, (SELECT listing_id FROM transactions WHERE id = transaction_id)) = $${markReadParams.length}`
+      );
+    }
+    const markReadScopeSql = markReadScopeFilters.length > 0 ? ` AND ${markReadScopeFilters.join(' AND ')}` : '';
 
     await pool.query(
       `UPDATE messages
        SET is_read = TRUE
        WHERE recipient_id = $1
          AND sender_id = $2
-         AND is_read = FALSE${markReadTxFilterSql}`,
+         AND recipient_deleted_at IS NULL
+         AND is_read = FALSE${markReadScopeSql}`,
       markReadParams
     );
 
@@ -219,6 +328,7 @@ const getThread = async (req, res) => {
         senderId: row.sender_id,
         recipientId: row.recipient_id,
         transactionId: row.transaction_id,
+        listingId: row.listing_id,
         content: row.content,
         isRead: row.is_read,
         createdAt: row.created_at,
@@ -256,13 +366,16 @@ const sendMessage = async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { recipientId, content, transactionId = null } = value;
+  const { recipientId, content, transactionId = null, listingId = null } = value;
 
   if (recipientId === senderId) {
     return res.status(400).json({ error: 'Cannot send a message to yourself' });
   }
 
   try {
+    const requestedListingId = listingId;
+    let effectiveListingId = listingId;
+
     const recipientResult = await pool.query(
       'SELECT id, first_name, last_name, avatar_url FROM users WHERE id = $1',
       [recipientId]
@@ -274,7 +387,7 @@ const sendMessage = async (req, res) => {
 
     if (transactionId) {
       const transactionResult = await pool.query(
-        `SELECT id, buyer_id, seller_id
+        `SELECT id, buyer_id, seller_id, listing_id
          FROM transactions
          WHERE id = $1`,
         [transactionId]
@@ -294,13 +407,41 @@ const sendMessage = async (req, res) => {
           error: 'Sender and recipient must both belong to the referenced transaction',
         });
       }
+
+      if (requestedListingId && requestedListingId !== tx.listing_id) {
+        return res.status(400).json({
+          error: 'Referenced listing does not match the transaction listing',
+        });
+      }
+
+      effectiveListingId = effectiveListingId || tx.listing_id;
+    }
+
+    if (requestedListingId && !transactionId) {
+      const listingResult = await pool.query(
+        `SELECT id, user_id
+         FROM listings
+         WHERE id = $1`,
+        [requestedListingId]
+      );
+
+      if (listingResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Listing not found' });
+      }
+
+      const listing = listingResult.rows[0];
+      if (listing.user_id !== recipientId) {
+        return res.status(403).json({
+          error: 'Recipient must be the owner of the referenced listing',
+        });
+      }
     }
 
     const inserted = await pool.query(
-      `INSERT INTO messages (sender_id, recipient_id, transaction_id, content)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, sender_id, recipient_id, transaction_id, content, is_read, created_at`,
-      [senderId, recipientId, transactionId, content]
+      `INSERT INTO messages (sender_id, recipient_id, transaction_id, listing_id, content)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, sender_id, recipient_id, transaction_id, listing_id, content, is_read, created_at`,
+      [senderId, recipientId, transactionId, effectiveListingId, content]
     );
 
     const senderResult = await pool.query(
@@ -315,6 +456,7 @@ const sendMessage = async (req, res) => {
       senderId: message.sender_id,
       recipientId: message.recipient_id,
       transactionId: message.transaction_id,
+      listingId: message.listing_id,
       content: message.content,
       isRead: message.is_read,
       createdAt: message.created_at,
@@ -340,7 +482,8 @@ const markMessageRead = async (req, res) => {
       `UPDATE messages
        SET is_read = TRUE
        WHERE id = $1 AND recipient_id = $2
-       RETURNING id, sender_id, recipient_id, transaction_id, content, is_read, created_at`,
+         AND recipient_deleted_at IS NULL
+       RETURNING id, sender_id, recipient_id, transaction_id, listing_id, content, is_read, created_at`,
       [messageId, userId]
     );
 
@@ -356,6 +499,7 @@ const markMessageRead = async (req, res) => {
       senderId: row.sender_id,
       recipientId: row.recipient_id,
       transactionId: row.transaction_id,
+      listingId: row.listing_id,
       content: row.content,
       isRead: row.is_read,
       createdAt: row.created_at,
@@ -366,9 +510,69 @@ const markMessageRead = async (req, res) => {
   }
 };
 
+const deleteConversation = async (req, res) => {
+  const userId = req.userId;
+  const otherUserId = Number(req.params.otherUserId);
+
+  if (!Number.isFinite(otherUserId) || otherUserId <= 0) {
+    return res.status(400).json({ error: 'Invalid otherUserId parameter' });
+  }
+
+  const { error, value } = conversationScopeSchema.validate(req.query);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  const { transactionId, listingId } = value;
+  const params = [userId, otherUserId];
+  const scopeFilters = [];
+
+  if (transactionId) {
+    params.push(transactionId);
+    scopeFilters.push(`m.transaction_id = $${params.length}`);
+  }
+
+  if (listingId) {
+    params.push(listingId);
+    scopeFilters.push(
+      `COALESCE(m.listing_id, (SELECT listing_id FROM transactions WHERE id = m.transaction_id)) = $${params.length}`
+    );
+  }
+
+  const scopeFilterSql = scopeFilters.length > 0 ? ` AND ${scopeFilters.join(' AND ')}` : '';
+
+  try {
+    const result = await pool.query(
+      `UPDATE messages AS m
+       SET
+         sender_deleted_at = CASE
+           WHEN m.sender_id = $1 THEN COALESCE(m.sender_deleted_at, CURRENT_TIMESTAMP)
+           ELSE m.sender_deleted_at
+         END,
+         recipient_deleted_at = CASE
+           WHEN m.recipient_id = $1 THEN COALESCE(m.recipient_deleted_at, CURRENT_TIMESTAMP)
+           ELSE m.recipient_deleted_at
+         END
+       WHERE (
+         (m.sender_id = $1 AND m.recipient_id = $2)
+         OR (m.sender_id = $2 AND m.recipient_id = $1)
+       )
+         AND ${visibleToUserSql('$1')}${scopeFilterSql}
+       RETURNING m.id`,
+      params
+    );
+
+    return res.json({ deletedCount: result.rows.length });
+  } catch (dbError) {
+    console.error('Delete conversation error:', dbError);
+    return res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+};
+
 module.exports = {
   getInbox,
   getThread,
   sendMessage,
   markMessageRead,
+  deleteConversation,
 };

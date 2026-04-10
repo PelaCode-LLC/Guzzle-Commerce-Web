@@ -158,7 +158,7 @@ export const fetchInboxBackend = async (token, params = {}) => {
 
 export const fetchMessageThreadBackend = async (
   token,
-  { otherUserId, transactionId, limit, offset } = {}
+  { otherUserId, transactionId, listingId, limit, offset } = {}
 ) => {
   if (!otherUserId) {
     throw new Error('otherUserId is required to fetch message thread');
@@ -167,6 +167,9 @@ export const fetchMessageThreadBackend = async (
   const query = new URLSearchParams();
   if (transactionId !== undefined && transactionId !== null && transactionId !== '') {
     query.set('transactionId', String(transactionId));
+  }
+  if (listingId !== undefined && listingId !== null && listingId !== '') {
+    query.set('listingId', String(listingId));
   }
   if (limit !== undefined && limit !== null && limit !== '') {
     query.set('limit', String(limit));
@@ -188,14 +191,46 @@ export const fetchMessageThreadBackend = async (
   return handleResponse(res);
 };
 
-export const sendMessageBackend = async (token, { recipientId, content, transactionId } = {}) => {
+export const deleteConversationBackend = async (
+  token,
+  { otherUserId, transactionId, listingId } = {}
+) => {
+  if (!otherUserId) {
+    throw new Error('otherUserId is required to delete a conversation');
+  }
+
+  const query = new URLSearchParams();
+  if (transactionId !== undefined && transactionId !== null && transactionId !== '') {
+    query.set('transactionId', String(transactionId));
+  }
+  if (listingId !== undefined && listingId !== null && listingId !== '') {
+    query.set('listingId', String(listingId));
+  }
+
+  const url = `${base}/api/messages/thread/${otherUserId}${
+    query.toString() ? `?${query.toString()}` : ''
+  }`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return handleResponse(res);
+};
+
+ export const sendMessageBackend = async (
+  token,
+  { recipientId, content, transactionId, listingId } = {}
+ ) => {
   const res = await fetch(`${base}/api/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ recipientId, content, transactionId }),
+    body: JSON.stringify({ recipientId, content, transactionId, listingId }),
   });
 
   return handleResponse(res);

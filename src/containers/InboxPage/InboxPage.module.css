@@ -403,6 +403,21 @@
   gap: 12px;
 }
 
+.directConversationMetaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.directConversationTimestamp {
+  composes: marketplaceTinyFontStyles from global;
+  color: var(--colorGrey500);
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .directThreadPanel {
   margin: 24px 24px 0 24px;
   padding-top: 24px;
@@ -419,9 +434,17 @@
   }
 }
 
+.directThreadHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .directThreadHeading {
   margin-top: 0;
   margin-bottom: 0;
+  flex: 1;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--colorGrey100);
   font-size: 13px;
@@ -429,6 +452,24 @@
   color: var(--colorGrey600);
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.directThreadDeleteButton {
+  align-self: flex-start;
+  margin-top: 1px;
+  padding: 0;
+  color: var(--colorGrey600);
+  white-space: nowrap;
+}
+
+.directThreadDeleteButton:hover {
+  color: var(--colorFail);
+}
+
+.directThreadDeleteButton svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
 }
 
 .directThreadList {
