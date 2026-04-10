@@ -77,10 +77,16 @@ const initializeDatabase = async () => {
         sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         transaction_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL,
+        listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL,
         content TEXT NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    await pool.query(`
+      ALTER TABLE messages
+      ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL;
     `);
 
     // Reviews table
@@ -101,6 +107,8 @@ const initializeDatabase = async () => {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_transactions_buyer_id ON transactions(buyer_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_transactions_seller_id ON transactions(seller_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_recipient_id ON messages(recipient_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_listing_id ON messages(listing_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_transaction_id ON messages(transaction_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_reviewed_user_id ON reviews(reviewed_user_id);');
 
     console.log('✅ Database initialized successfully');

@@ -518,6 +518,7 @@
   "InboxPage.default-purchase.reviewed.status": "Completed",
   "InboxPage.fetchFailed": "Couldn't load all messages. Please try again.",
   "InboxPage.conversationWith": "Conversation with {otherUserName}",
+  "InboxPage.conversationWithListing": "Conversation with {otherUserName} about {listingTitle}",
   "InboxPage.messagePlaceholder": "Reply to {otherUserName}",
   "InboxPage.noMessagesFound": "No messages yet.",
   "InboxPage.noOrdersFound": "You haven't made any orders yet.",

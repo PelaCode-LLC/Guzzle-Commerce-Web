@@ -247,12 +247,13 @@ const sendInquiryPayloadCreator = (
 
   if (hasLocalJwt) {
     const listingAuthorId = listing?.author?.id;
+    const listingId = listing?.id ? toBackendIdFromUuid(listing.id) : null;
     const recipientId = listingAuthorId ? toBackendIdFromUuid(listingAuthorId) : null;
     const content = message?.trim();
 
-    if (!recipientId || !content) {
+    if (!recipientId || !listingId || !content) {
       return rejectWithValue(
-        storableError(new Error('Could not resolve recipient or message content for inquiry'))
+        storableError(new Error('Could not resolve recipient, listing, or message content for inquiry'))
       );
     }
 
@@ -260,6 +261,7 @@ const sendInquiryPayloadCreator = (
       recipientId,
       content,
       transactionId: null,
+      listingId,
     })
       .then(() => {
         dispatch(setCurrentUserHasOrders());

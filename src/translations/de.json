@@ -520,6 +520,7 @@
   "InboxPage.noOrdersFound": "Du hast noch keine Bestellungen gemacht.",
   "InboxPage.noSalesFound": "Bisher hat noch niemand etwas bei dir bestellt.",
   "InboxPage.conversationWith": "Unterhaltung mit {otherUserName}",
+  "InboxPage.conversationWithListing": "Unterhaltung mit {otherUserName} über {listingTitle}",
   "InboxPage.messagePlaceholder": "Antwort an {otherUserName}",
   "InboxPage.noMessagesFound": "Noch keine Nachrichten.",
   "InboxPage.ordersTabTitle": "Als Kund:in",
