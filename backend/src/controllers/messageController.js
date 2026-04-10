@@ -62,6 +62,8 @@ const getInbox = async (req, res) => {
            COALESCE(m.listing_id, tx.listing_id) AS listing_id,
            m.content,
            m.is_read,
+           m.sender_deleted_at,
+           m.recipient_deleted_at,
            m.created_at,
            CASE
              WHEN m.sender_id = $1 THEN m.recipient_id
