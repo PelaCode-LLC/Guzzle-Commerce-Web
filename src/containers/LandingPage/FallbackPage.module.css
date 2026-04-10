@@ -1,5 +1,81 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 88px 24px 64px;
+  background: linear-gradient(135deg, #101f33 0%, #1b3657 45%, #2a4f7f 100%);
+}
+
+.heroGlow {
+  position: absolute;
+  top: -220px;
+  right: -120px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(84, 180, 255, 0.38) 0%, rgba(84, 180, 255, 0) 72%);
+  pointer-events: none;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  color: var(--colorWhite);
+  text-align: center;
+}
+
+.heroEyebrow {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.heroTitle {
+  margin: 16px auto 0;
+  max-width: 18ch;
+  color: var(--colorWhite);
+}
+
+.heroSubtitle {
+  margin: 16px auto 0;
+  max-width: 62ch;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.heroActions {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.heroPrimaryCta,
+.heroSecondaryCta {
+  border-radius: 6px;
+  padding: 12px 20px;
+  text-decoration: none;
+  font-weight: var(--fontWeightMedium);
+  text-align: center;
+}
+
+.heroPrimaryCta {
+  color: #112745;
+  background-color: #e8f4ff;
+}
+
+.heroSecondaryCta {
+  color: var(--colorWhite);
+  background-color: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
 .root {
-  padding: 72px 24px;
+  padding: 64px 24px 72px;
+  background: linear-gradient(180deg, #f4f8fc 0%, #ffffff 40%);
 }
 
 .content {
@@ -34,6 +110,33 @@
   text-decoration: none;
   color: var(--colorGrey700);
   background-color: var(--colorWhite);
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.categoryCard:hover {
+  transform: translateY(-2px);
+  border-color: #c2d5ea;
+  box-shadow: 0 10px 24px rgba(17, 39, 69, 0.12);
+}
+
+.categoryMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.categoryIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #e8f2fd 0%, #d8e9fb 100%);
+  color: #20456f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .categoryName {
@@ -55,8 +158,30 @@
 }
 
 @media (--viewportMedium) {
+  .hero {
+    padding: 108px 40px 82px;
+  }
+
+  .heroGlow {
+    width: 520px;
+    height: 520px;
+    top: -240px;
+    right: -80px;
+  }
+
+  .heroActions {
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .heroPrimaryCta,
+  .heroSecondaryCta {
+    min-width: 220px;
+  }
+
   .root {
-    padding: 96px 40px;
+    padding: 82px 40px 96px;
   }
 
   .categoryGrid {

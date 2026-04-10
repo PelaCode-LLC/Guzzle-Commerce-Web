@@ -13,10 +13,23 @@ const PageBuilder = loadable(() =>
 
 const CATEGORY_PARAM_NAME = 'pub_categoryLevel1';
 const fallbackCategories = localCategoryCards;
+const categoryIconById = {
+  'cars & trucks': 'CT',
+  motorcycles: 'MC',
+  watercraft: 'WC',
+  parts: 'PT',
+  electronics: 'EL',
+  tools: 'TL',
+  services: 'SV',
+};
 
 // Create fallback content (array of sections) in page asset format:
 export const fallbackSections = (error, categories) => ({
   sections: [
+    {
+      sectionType: 'customHero',
+      sectionId: 'landing-hero',
+    },
     {
       sectionType: 'customCategories',
       sectionId: 'landing-categories',
@@ -43,6 +56,41 @@ export const fallbackSections = (error, categories) => ({
     },
   },
 });
+
+const SectionHero = props => {
+  const { sectionId } = props;
+  const intl = useIntl();
+
+  return (
+    <section id={sectionId} className={css.hero}>
+      <div className={css.heroGlow} />
+      <div className={css.heroContent}>
+        <p className={css.heroEyebrow}>
+          {intl.formatMessage({ id: 'LandingPage.localHome.heroEyebrow' })}
+        </p>
+        <h1 className={css.heroTitle}>
+          {intl.formatMessage({ id: 'LandingPage.localHome.heroTitle' })}
+        </h1>
+        <p className={css.heroSubtitle}>
+          {intl.formatMessage({ id: 'LandingPage.localHome.heroSubtitle' })}
+        </p>
+
+        <div className={css.heroActions}>
+          <NamedLink name="SearchPage" className={css.heroPrimaryCta}>
+            {intl.formatMessage({ id: 'LandingPage.localHome.heroPrimaryCta' })}
+          </NamedLink>
+          <NamedLink
+            name="SearchPage"
+            to={{ search: `?${CATEGORY_PARAM_NAME}=${encodeURIComponent('services')}` }}
+            className={css.heroSecondaryCta}
+          >
+            {intl.formatMessage({ id: 'LandingPage.localHome.heroSecondaryCta' })}
+          </NamedLink>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 // Note: this microcopy/translation does not come from translation file.
 //       It needs to be something that is not part of fetched assets but built-in text
@@ -77,6 +125,7 @@ const SectionCategoryLinks = props => {
           {categoryCards.map(category => {
             const search = `?${CATEGORY_PARAM_NAME}=${encodeURIComponent(category.id)}`;
             const categoryName = category.name || category.label || category.id;
+            const categoryIcon = categoryIconById[category.id] || 'IT';
 
             return (
               <NamedLink
@@ -85,7 +134,10 @@ const SectionCategoryLinks = props => {
                 to={{ search }}
                 className={css.categoryCard}
               >
-                <span className={css.categoryName}>{categoryName}</span>
+                <span className={css.categoryMain}>
+                  <span className={css.categoryIcon}>{categoryIcon}</span>
+                  <span className={css.categoryName}>{categoryName}</span>
+                </span>
                 <span className={css.categoryAction}>
                   {intl.formatMessage({ id: 'LandingPage.localHome.browse' })}
                 </span>
@@ -109,6 +161,7 @@ const FallbackPage = props => {
       pageAssetsData={fallbackSections(error, categories)}
       options={{
         sectionComponents: {
+          customHero: { component: SectionHero },
           customMaintenance: { component: SectionMaintenanceMode },
           customCategories: { component: SectionCategoryLinks },
         },
