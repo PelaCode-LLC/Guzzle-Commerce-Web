@@ -509,11 +509,64 @@
 .directThreadEmptyState {
   margin: 24px;
   color: var(--colorGrey500);
+
+/* Message grouping: tighten gap for consecutive bubbles from the same sender */
+.directThreadMessageGrouped {
+  margin-top: -6px;
 }
 
-/* Transaction status affects to certain font colors and weights */
+/* Avatar placeholder to preserve horizontal alignment when avatar is hidden */
+.directThreadAvatarHidden {
+  width: 40px;
+  flex-shrink: 0;
+  visibility: hidden;
+}
 
-.stateName {
+/* Thread list fade-in animation when switching conversations */
+@keyframes threadFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.directThreadList {
+  animation: threadFadeIn 220ms ease;
+}
+
+/* Empty state: centred icon + text */
+.directThreadEmptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--colorGrey500);
+  text-align: center;
+}
+
+/* Inner empty messages panel (no messages yet in an open thread) */
+.directThreadEmptyMessages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--colorGrey500);
+  text-align: center;
+}
+
+.directThreadEmptyIcon {
+  width: 56px;
+  height: 56px;
+  opacity: 0.35;
+}
+
+.directThreadEmptyText {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--colorGrey500);
+}
   /* This class is empty on purpose, it is used below for banned users */
 }
 
