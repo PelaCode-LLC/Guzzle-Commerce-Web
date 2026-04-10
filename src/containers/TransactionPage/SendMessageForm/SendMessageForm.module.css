@@ -13,6 +13,27 @@
   }
 }
 
+/* Dark-mode overrides for the textarea input */
+:global(:root.theme-dark) .textarea {
+  background-color: var(--colorGrey200);
+  border-color: var(--colorGrey300);
+  color: var(--colorGrey700);
+}
+
+:global(:root.theme-dark) .textarea:hover {
+  border-color: var(--colorGrey400);
+}
+
+:global(:root.theme-dark) .textarea:focus {
+  background-color: var(--colorGrey200);
+  border-color: var(--marketplaceColor);
+  box-shadow: 0 0 0 2px rgba(105, 56, 239, 0.25);
+}
+
+:global(:root.theme-dark) .textarea::placeholder {
+  color: var(--colorGrey500);
+}
+
 .spinner {
   stroke: var(--colorWhite);
   width: 18px;

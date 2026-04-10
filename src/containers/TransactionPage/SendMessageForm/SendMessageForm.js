@@ -105,6 +105,12 @@ class SendMessageFormComponent extends Component {
                 placeholder={messagePlaceholder}
                 onFocus={this.handleFocus}
                 onBlur={this.handleBlur}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    form.submit();
+                  }
+                }}
               />
               <div className={css.submitContainer}>
                 <div className={css.errorContainer}>

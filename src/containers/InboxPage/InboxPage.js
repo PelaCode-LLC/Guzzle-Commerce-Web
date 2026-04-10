@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useHistory } from 'react-router-dom';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
@@ -10,6 +10,7 @@ import { useRouteConfiguration } from '../../context/routeConfigurationContext';
 import { FormattedMessage, intlShape, useIntl } from '../../util/reactIntl';
 import { parse } from '../../util/urlHelpers';
 import { formatDateWithProximity } from '../../util/dates';
+import IconInquiry from '../../components/IconInquiry/IconInquiry';
 import {
   fetchInboxBackend,
   fetchMessageThreadBackend,
@@ -109,6 +110,39 @@ const toBackendInboxUser = user => {
   };
 };
 
+// Relative time: "just now", "2 min ago", "Yesterday 3:42 PM", etc.
+const formatRelativeTime = (date, intl) => {
+  const nowMs = Date.now();
+  const diffMs = nowMs - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+
+  if (diffSec < 60) {
+    return intl.formatMessage({ id: 'InboxPage.timeJustNow' });
+  }
+  if (diffMin < 60) {
+    return intl.formatMessage({ id: 'InboxPage.timeMinutesAgo' }, { count: diffMin });
+  }
+  if (diffHour < 24) {
+    return intl.formatMessage({ id: 'InboxPage.timeHoursAgo' }, { count: diffHour });
+  }
+
+  // Yesterday
+  const yesterday = new Date(nowMs - 86400000);
+  if (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  ) {
+    const timeStr = intl.formatDate(date, { hour: 'numeric', minute: 'numeric' });
+    return `${intl.formatMessage({ id: 'InboxPage.timeYesterday' })} ${timeStr}`;
+  }
+
+  // Older: "Apr 7, 3:42 PM"
+  return intl.formatDate(date, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+};
+
 const backendConversationSearchParams = (search, conversation) => {
   return {
     ...search,
@@ -119,11 +153,9 @@ const backendConversationSearchParams = (search, conversation) => {
 const DirectConversationItem = props => {
   const { conversation, isSelected, onSelect, intl } = props;
   const otherUser = toBackendInboxUser(conversation.otherUser);
-  const todayString = intl.formatMessage({ id: 'InboxPage.today' });
-  const formattedDate = formatDateWithProximity(
+  const formattedDate = formatRelativeTime(
     new Date(conversation.lastMessage.createdAt),
-    intl,
-    todayString
+    intl
   );
   const itemClasses = classNames(css.directConversationButton, {
     [css.directConversationButtonSelected]: isSelected,
@@ -153,21 +185,50 @@ const DirectConversationItem = props => {
 };
 
 const DirectThreadMessage = props => {
-  const { message, isOwn, intl } = props;
+  const { message, isOwn, isFirst, isLast, intl } = props;
   const sender = toBackendInboxUser(message.sender);
-  const todayString = intl.formatMessage({ id: 'InboxPage.today' });
-  const formattedDate = formatDateWithProximity(new Date(message.createdAt), intl, todayString);
+  const formattedDate = formatRelativeTime(new Date(message.createdAt), intl);
+
+  // Adjust border-radius for grouped consecutive messages
+  const ownRadius = isLast ? '14px 14px 4px 14px' : isFirst ? '14px 14px 4px 14px' : '14px 14px 4px 14px';
+  const bubbleStyle = isOwn
+    ? {
+        borderRadius: isFirst && isLast
+          ? '14px 14px 4px 14px'
+          : isFirst
+          ? '14px 14px 4px 4px'
+          : isLast
+          ? '4px 14px 14px 4px'
+          : '4px 14px 4px 4px',
+      }
+    : {
+        borderRadius: isFirst && isLast
+          ? '14px 14px 14px 4px'
+          : isFirst
+          ? '14px 14px 4px 4px'
+          : isLast
+          ? '4px 4px 14px 14px'
+          : '4px 4px 4px 4px',
+      };
+
+  const messageClasses = classNames(
+    isOwn ? css.directThreadOwnMessage : css.directThreadMessage,
+    { [css.directThreadMessageGrouped]: !isFirst }
+  );
 
   return (
-    <div className={isOwn ? css.directThreadOwnMessage : css.directThreadMessage}>
+    <div className={messageClasses}>
       {!isOwn ? (
-        <div className={css.directThreadAvatar}>
-          <Avatar user={sender} disableProfileLink />
+        <div className={classNames(css.directThreadAvatar, { [css.directThreadAvatarHidden]: !isLast })}>
+          {isLast ? <Avatar user={sender} disableProfileLink /> : null}
         </div>
       ) : null}
-      <div className={isOwn ? css.directThreadOwnBubble : css.directThreadBubble}>
+      <div
+        className={isOwn ? css.directThreadOwnBubble : css.directThreadBubble}
+        style={bubbleStyle}
+      >
         <p className={css.directThreadContent}>{message.content}</p>
-        <p className={css.directThreadDate}>{formattedDate}</p>
+        {isLast ? <p className={css.directThreadDate}>{formattedDate}</p> : null}
       </div>
     </div>
   );
@@ -389,7 +450,6 @@ export const InboxPageComponent = props => {
 
   const isOrders = tab === 'orders';
   const hasNoResults = !fetchInProgress && transactions.length === 0 && !fetchOrdersOrSalesError;
-  const title = intl.formatMessage({ id: 'InboxPage.title' });
   const search = parse(location.search);
   const token = getStoredJwt();
   const isBackendInboxMode = !!token;
@@ -400,6 +460,13 @@ export const InboxPageComponent = props => {
   const [backendThreadInProgress, setBackendThreadInProgress] = useState(false);
   const [backendSendInProgress, setBackendSendInProgress] = useState(false);
   const [backendSendError, setBackendSendError] = useState(null);
+  const threadScrollRef = useRef(null);
+
+  // Compute total unread for page title badge
+  const totalUnread = backendConversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const title = totalUnread > 0
+    ? `(${totalUnread}) ${intl.formatMessage({ id: 'InboxPage.title' })}`
+    : intl.formatMessage({ id: 'InboxPage.title' });
   const selectedConversationId = Number(search.conversation);
   const selectedConversation = backendConversations.find(
     conversation => conversation.otherUser.id === selectedConversationId
@@ -482,6 +549,13 @@ export const InboxPageComponent = props => {
       handleBackendConversationSelect(firstConversation.otherUser.id);
     }
   }, [isBackendInboxMode, selectedConversationId, backendConversations]);
+
+  // Auto-scroll thread list to the bottom whenever messages change
+  useEffect(() => {
+    if (threadScrollRef.current) {
+      threadScrollRef.current.scrollTop = threadScrollRef.current.scrollHeight;
+    }
+  }, [backendThreadMessages]);
 
   const handleBackendConversationSelect = otherUserId => {
     const nextSearchParams = backendConversationSearchParams(search, otherUserId);
@@ -659,16 +733,37 @@ export const InboxPageComponent = props => {
                     values={{ otherUserName: toDisplayName(selectedConversation.otherUser) }}
                   />
                 </h3>
-                <div className={css.directThreadList}>
+                <div className={css.directThreadList} ref={threadScrollRef}>
                   {!backendThreadInProgress ? (
-                    backendThreadMessages.map(message => (
-                      <DirectThreadMessage
-                        key={message.id}
-                        message={message}
-                        isOwn={message.sender?.id === currentUserBackendId}
-                        intl={intl}
-                      />
-                    ))
+                    backendThreadMessages.length > 0 ? (
+                      backendThreadMessages.map((message, index) => {
+                        const prevSenderId =
+                          index > 0 ? backendThreadMessages[index - 1].sender?.id : null;
+                        const nextSenderId =
+                          index < backendThreadMessages.length - 1
+                            ? backendThreadMessages[index + 1].sender?.id
+                            : null;
+                        const isFirst = prevSenderId !== message.sender?.id;
+                        const isLast = nextSenderId !== message.sender?.id;
+                        return (
+                          <DirectThreadMessage
+                            key={message.id}
+                            message={message}
+                            isOwn={message.sender?.id === currentUserBackendId}
+                            isFirst={isFirst}
+                            isLast={isLast}
+                            intl={intl}
+                          />
+                        );
+                      })
+                    ) : (
+                      <div className={css.directThreadEmptyMessages}>
+                        <IconInquiry className={css.directThreadEmptyIcon} />
+                        <p className={css.directThreadEmptyText}>
+                          <FormattedMessage id="InboxPage.noMessagesYet" />
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <div className={css.listItemsLoading}>
                       <IconSpinner />
@@ -690,7 +785,10 @@ export const InboxPageComponent = props => {
               </div>
             ) : hasBackendConversations ? (
               <div className={css.directThreadEmptyState}>
-                <FormattedMessage id="InboxPage.selectConversation" />
+                <IconInquiry className={css.directThreadEmptyIcon} />
+                <p className={css.directThreadEmptyText}>
+                  <FormattedMessage id="InboxPage.selectConversation" />
+                </p>
               </div>
             ) : null}
           </>
