@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import loadable from '@loadable/component';
 import { useIntl } from 'react-intl';
 
 import { useConfiguration } from '../../context/configurationContext';
+import { searchListingsBackend, toUuidFromBackendId } from '../../util/backend';
+import { createSlug } from '../../util/urlHelpers';
 import { localCategoryCards } from '../../config/localCategories';
 import { NamedLink } from '../../components';
 import css from './FallbackPage.module.css';
@@ -44,12 +46,110 @@ const CategoryIcon = props => {
   );
 };
 
+// A lightweight card component for featured listings using raw backend data
+const FeaturedListingCard = props => {
+  const { listing, intl } = props;
+  const uuid = toUuidFromBackendId(listing.id);
+  const slug = createSlug(listing.title || '');
+  const priceDisplay =
+    listing.price != null
+      ? intl.formatNumber(Number(listing.price), {
+          style: 'currency',
+          currency: listing.currency || 'USD',
+          maximumFractionDigits: 0,
+        })
+      : null;
+
+  return (
+    <NamedLink name="ListingPage" params={{ id: uuid, slug }} className={css.featuredCard}>
+      <div className={css.featuredCardImageWrap}>
+        {listing.imageUrl ? (
+          <img src={listing.imageUrl} alt={listing.title} className={css.featuredCardImg} />
+        ) : (
+          <div className={css.featuredCardImagePlaceholder} />
+        )}
+        {listing.category ? (
+          <span className={css.featuredCardBadge}>{listing.category}</span>
+        ) : null}
+      </div>
+      <div className={css.featuredCardBody}>
+        <p className={css.featuredCardTitle}>{listing.title}</p>
+        {priceDisplay ? <p className={css.featuredCardPrice}>{priceDisplay}</p> : null}
+      </div>
+    </NamedLink>
+  );
+};
+
+const SectionFeaturedListings = props => {
+  const { sectionId } = props;
+  const intl = useIntl();
+  const [listings, setListings] = useState([]);
+  const [loadingDone, setLoadingDone] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    searchListingsBackend({ limit: 8 })
+      .then(response => {
+        if (isMounted) {
+          setListings((response?.listings || []).slice(0, 8));
+        }
+      })
+      .catch(() => {
+        // silently fail — featured strip is a progressive enhancement
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingDone(true);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (loadingDone && listings.length === 0) {
+    return null;
+  }
+
+  return (
+    <section id={sectionId} className={css.featuredSection}>
+      <div className={css.featuredContent}>
+        <div className={css.featuredHeaderRow}>
+          <h2 className={css.featuredTitle}>
+            {intl.formatMessage({ id: 'LandingPage.localHome.featuredTitle' })}
+          </h2>
+          <NamedLink name="SearchPage" className={css.featuredViewAll}>
+            {intl.formatMessage({ id: 'LandingPage.localHome.viewAll' })} →
+          </NamedLink>
+        </div>
+        {!loadingDone ? (
+          <div className={css.featuredSkeletonGrid}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={css.featuredSkeleton} />
+            ))}
+          </div>
+        ) : (
+          <div className={css.featuredGrid}>
+            {listings.map(listing => (
+              <FeaturedListingCard key={listing.id} listing={listing} intl={intl} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
 // Create fallback content (array of sections) in page asset format:
 export const fallbackSections = (error, categories) => ({
   sections: [
     {
       sectionType: 'customHero',
       sectionId: 'landing-hero',
+    },
+    {
+      sectionType: 'customFeatured',
+      sectionId: 'landing-featured',
     },
     {
       sectionType: 'customCategories',
@@ -184,6 +284,7 @@ const FallbackPage = props => {
       options={{
         sectionComponents: {
           customHero: { component: SectionHero },
+          customFeatured: { component: SectionFeaturedListings },
           customMaintenance: { component: SectionMaintenanceMode },
           customCategories: { component: SectionCategoryLinks },
         },
