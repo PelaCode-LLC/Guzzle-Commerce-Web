@@ -5,6 +5,7 @@ const {
   getThread,
   sendMessage,
   markMessageRead,
+  deleteConversation,
 } = require('../controllers/messageController');
 
 const router = express.Router();
@@ -14,6 +15,9 @@ router.get('/', authMiddleware, getInbox);
 
 // GET /api/messages/thread/:otherUserId - list thread between current user and another user
 router.get('/thread/:otherUserId', authMiddleware, getThread);
+
+// DELETE /api/messages/thread/:otherUserId - hide a scoped conversation for current user
+router.delete('/thread/:otherUserId', authMiddleware, deleteConversation);
 
 // POST /api/messages - send a message
 router.post('/', authMiddleware, sendMessage);

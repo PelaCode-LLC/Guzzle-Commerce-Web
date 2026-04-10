@@ -4,6 +4,7 @@ const {
   getThread,
   sendMessage,
   markMessageRead,
+  deleteConversation,
 } = require('./messageController');
 
 // Mock database
@@ -247,6 +248,59 @@ describe('messageController', () => {
           error: expect.stringContaining('Message not found'),
         })
       );
+    });
+  });
+
+  describe('deleteConversation', () => {
+    it('rejects invalid otherUserId parameter', async () => {
+      const req = {
+        userId: 42,
+        params: {
+          otherUserId: 'invalid',
+        },
+        query: {},
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      await deleteConversation(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.stringContaining('Invalid otherUserId'),
+        })
+      );
+    });
+
+    it('soft deletes the scoped conversation for the current user', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 11 }, { id: 12 }] });
+
+      const req = {
+        userId: 42,
+        params: {
+          otherUserId: '9',
+        },
+        query: {
+          listingId: '77',
+        },
+      };
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+
+      await deleteConversation(req, res);
+
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('sender_deleted_at'),
+        [42, 9, 77]
+      );
+      expect(res.json).toHaveBeenCalledWith({ deletedCount: 2 });
     });
   });
 });

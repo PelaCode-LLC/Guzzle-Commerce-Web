@@ -519,6 +519,8 @@
   "InboxPage.fetchFailed": "Impossible de charger tous les messages. Veuillez réessayer.",
   "InboxPage.conversationWith": "Conversation avec {otherUserName}",
   "InboxPage.conversationWithListing": "Conversation avec {otherUserName} au sujet de {listingTitle}",
+  "InboxPage.deleteConversation": "Supprimer la conversation",
+  "InboxPage.deleteConversationConfirm": "Supprimer cette conversation de votre boîte de réception ? Elle ne sera supprimée que pour vous.",
   "InboxPage.messagePlaceholder": "Répondre à {otherUserName}",
   "InboxPage.noMessagesFound": "Aucun message pour le moment.",
   "InboxPage.noOrdersFound": "Vous n'avez pas encore passé de commandes.",

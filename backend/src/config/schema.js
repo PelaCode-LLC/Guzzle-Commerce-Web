@@ -80,6 +80,8 @@ const initializeDatabase = async () => {
         listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL,
         content TEXT NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
+        sender_deleted_at TIMESTAMP,
+        recipient_deleted_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -87,6 +89,16 @@ const initializeDatabase = async () => {
     await pool.query(`
       ALTER TABLE messages
       ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL;
+    `);
+
+    await pool.query(`
+      ALTER TABLE messages
+      ADD COLUMN IF NOT EXISTS sender_deleted_at TIMESTAMP;
+    `);
+
+    await pool.query(`
+      ALTER TABLE messages
+      ADD COLUMN IF NOT EXISTS recipient_deleted_at TIMESTAMP;
     `);
 
     // Reviews table
@@ -107,6 +119,7 @@ const initializeDatabase = async () => {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_transactions_buyer_id ON transactions(buyer_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_transactions_seller_id ON transactions(seller_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_recipient_id ON messages(recipient_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_listing_id ON messages(listing_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_messages_transaction_id ON messages(transaction_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_reviews_reviewed_user_id ON reviews(reviewed_user_id);');

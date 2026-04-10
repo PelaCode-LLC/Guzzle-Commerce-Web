@@ -519,6 +519,8 @@
   "InboxPage.fetchFailed": "Couldn't load all messages. Please try again.",
   "InboxPage.conversationWith": "Conversation with {otherUserName}",
   "InboxPage.conversationWithListing": "Conversation with {otherUserName} about {listingTitle}",
+  "InboxPage.deleteConversation": "Delete conversation",
+  "InboxPage.deleteConversationConfirm": "Delete this conversation from your inbox? This only removes it for you.",
   "InboxPage.messagePlaceholder": "Reply to {otherUserName}",
   "InboxPage.noMessagesFound": "No messages yet.",
   "InboxPage.noOrdersFound": "You haven't made any orders yet.",

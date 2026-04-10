@@ -8,6 +8,11 @@ const listSchema = Joi.object({
   listingId: Joi.number().integer().positive(),
 });
 
+const conversationScopeSchema = Joi.object({
+  transactionId: Joi.number().integer().positive(),
+  listingId: Joi.number().integer().positive(),
+});
+
 const sendMessageSchema = Joi.object({
   recipientId: Joi.number().integer().positive().required(),
   content: Joi.string().trim().min(1).max(5000).required(),
@@ -33,6 +38,9 @@ const toConversationKey = (scopeType, scopeId, otherUserId) => {
 
   return `direct:${otherUserId}`;
 };
+
+const visibleToUserSql = userIdParam =>
+  `((m.sender_id = ${userIdParam} AND m.sender_deleted_at IS NULL) OR (m.recipient_id = ${userIdParam} AND m.recipient_deleted_at IS NULL))`;
 
 const getInbox = async (req, res) => {
   const userId = req.userId;
@@ -71,7 +79,7 @@ const getInbox = async (req, res) => {
            END AS conversation_scope_id
          FROM messages m
          LEFT JOIN transactions tx ON tx.id = m.transaction_id
-         WHERE m.sender_id = $1 OR m.recipient_id = $1
+         WHERE ${visibleToUserSql('$1')}
        ),
        ranked_messages AS (
          SELECT
@@ -91,6 +99,7 @@ const getInbox = async (req, res) => {
          FROM scoped_messages sm
          WHERE sm.sender_id = sm.other_user_id
            AND sm.recipient_id = $1
+           AND sm.recipient_deleted_at IS NULL
            AND sm.is_read = FALSE
          GROUP BY sm.other_user_id, sm.conversation_scope_type, sm.conversation_scope_id
        )
@@ -145,7 +154,7 @@ const getInbox = async (req, res) => {
            END AS conversation_scope_id
          FROM messages m
          LEFT JOIN transactions tx ON tx.id = m.transaction_id
-         WHERE m.sender_id = $1 OR m.recipient_id = $1
+         WHERE ${visibleToUserSql('$1')}
          GROUP BY other_user_id, conversation_scope_type, conversation_scope_id
        ) conversation_count`,
       [userId]
@@ -258,7 +267,8 @@ const getThread = async (req, res) => {
        WHERE (
          (m.sender_id = $1 AND m.recipient_id = $2)
          OR (m.sender_id = $2 AND m.recipient_id = $1)
-       )${scopeFilterSql}
+       )
+         AND ${visibleToUserSql('$1')}${scopeFilterSql}
        ORDER BY m.created_at DESC, m.id DESC
        LIMIT ${limitParam} OFFSET ${offsetParam}`,
       params
@@ -283,7 +293,8 @@ const getThread = async (req, res) => {
        WHERE (
          (m.sender_id = $1 AND m.recipient_id = $2)
          OR (m.sender_id = $2 AND m.recipient_id = $1)
-       )${countScopeSql}`,
+       )
+         AND ${visibleToUserSql('$1')}${countScopeSql}`,
       countParams
     );
 
@@ -306,6 +317,7 @@ const getThread = async (req, res) => {
        SET is_read = TRUE
        WHERE recipient_id = $1
          AND sender_id = $2
+         AND recipient_deleted_at IS NULL
          AND is_read = FALSE${markReadScopeSql}`,
       markReadParams
     );
@@ -470,6 +482,7 @@ const markMessageRead = async (req, res) => {
       `UPDATE messages
        SET is_read = TRUE
        WHERE id = $1 AND recipient_id = $2
+         AND recipient_deleted_at IS NULL
        RETURNING id, sender_id, recipient_id, transaction_id, listing_id, content, is_read, created_at`,
       [messageId, userId]
     );
@@ -497,9 +510,69 @@ const markMessageRead = async (req, res) => {
   }
 };
 
+const deleteConversation = async (req, res) => {
+  const userId = req.userId;
+  const otherUserId = Number(req.params.otherUserId);
+
+  if (!Number.isFinite(otherUserId) || otherUserId <= 0) {
+    return res.status(400).json({ error: 'Invalid otherUserId parameter' });
+  }
+
+  const { error, value } = conversationScopeSchema.validate(req.query);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  const { transactionId, listingId } = value;
+  const params = [userId, otherUserId];
+  const scopeFilters = [];
+
+  if (transactionId) {
+    params.push(transactionId);
+    scopeFilters.push(`m.transaction_id = $${params.length}`);
+  }
+
+  if (listingId) {
+    params.push(listingId);
+    scopeFilters.push(
+      `COALESCE(m.listing_id, (SELECT listing_id FROM transactions WHERE id = m.transaction_id)) = $${params.length}`
+    );
+  }
+
+  const scopeFilterSql = scopeFilters.length > 0 ? ` AND ${scopeFilters.join(' AND ')}` : '';
+
+  try {
+    const result = await pool.query(
+      `UPDATE messages AS m
+       SET
+         sender_deleted_at = CASE
+           WHEN m.sender_id = $1 THEN COALESCE(m.sender_deleted_at, CURRENT_TIMESTAMP)
+           ELSE m.sender_deleted_at
+         END,
+         recipient_deleted_at = CASE
+           WHEN m.recipient_id = $1 THEN COALESCE(m.recipient_deleted_at, CURRENT_TIMESTAMP)
+           ELSE m.recipient_deleted_at
+         END
+       WHERE (
+         (m.sender_id = $1 AND m.recipient_id = $2)
+         OR (m.sender_id = $2 AND m.recipient_id = $1)
+       )
+         AND ${visibleToUserSql('$1')}${scopeFilterSql}
+       RETURNING m.id`,
+      params
+    );
+
+    return res.json({ deletedCount: result.rows.length });
+  } catch (dbError) {
+    console.error('Delete conversation error:', dbError);
+    return res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+};
+
 module.exports = {
   getInbox,
   getThread,
   sendMessage,
   markMessageRead,
+  deleteConversation,
 };
