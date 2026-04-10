@@ -65,7 +65,7 @@
     overflow: hidden;
     border-right: 1px solid var(--colorGrey100);
     box-shadow: none;
-    background-color: var(--colorWhite);
+    background-color: var(--colorGrey50);
   }
   @media (--viewportLargeWithPaddings) {
     padding: 32px 12px 24px 12px;
@@ -315,6 +315,9 @@
   composes: marketplaceTinyFontStyles from global;
   grid-area: item;
   color: var(--colorGrey700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   margin-top: 0;
   margin-bottom: 0;
@@ -369,19 +372,28 @@
   background: transparent;
   text-align: left;
   display: flex;
-  padding: 0;
+  align-items: center;
+  padding: 8px 8px;
+  gap: 10px;
   cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 130ms ease;
+}
+
+.directConversationButton:hover {
+  background-color: var(--colorGrey100);
 }
 
 .directConversationButtonSelected {
-  background-color: var(--colorGrey100);
+  background-color: rgba(105, 56, 239, 0.08);
   border-radius: 8px;
+  box-shadow: inset 3px 0 0 var(--marketplaceColor);
 }
 
 .directConversationContent {
   flex: 1;
   min-width: 0;
-  padding: 6px 0;
+  padding: 2px 0;
 }
 
 .directConversationHeaderRow {
@@ -409,7 +421,14 @@
 
 .directThreadHeading {
   margin-top: 0;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--colorGrey100);
+  font-size: 13px;
+  font-weight: var(--fontWeightSemiBold);
+  color: var(--colorGrey600);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .directThreadList {
@@ -417,6 +436,7 @@
   flex-direction: column;
   gap: 12px;
   margin-bottom: 24px;
+  padding-top: 16px;
 
   @media (--viewportLarge) {
     flex: 1;
@@ -455,26 +475,35 @@
 .directThreadBubble {
   max-width: 80%;
   background-color: var(--colorGrey100);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 14px 14px 14px 4px;
+  padding: 10px 14px;
 }
 
 .directThreadOwnBubble {
   max-width: 80%;
-  background-color: var(--marketplaceColorLight);
-  border-radius: 12px;
-  padding: 12px;
+  background-color: var(--marketplaceColor);
+  border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px;
 }
 
 .directThreadContent {
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   white-space: pre-wrap;
+}
+
+.directThreadOwnBubble .directThreadContent {
+  color: hsl(0 0% 100%);
 }
 
 .directThreadDate {
   composes: marketplaceTinyFontStyles from global;
   margin: 0;
   color: var(--colorGrey500);
+}
+
+.directThreadOwnBubble .directThreadDate {
+  color: rgba(255, 255, 255, 0.7);
+  text-align: right;
 }
 
 .directThreadEmptyState {
@@ -529,4 +558,32 @@
   & .stateName {
     color: var(--colorGrey300);
   }
+}
+
+/* ===== Dark-mode inbox overrides ===== */
+
+:global(:root.theme-dark) .navigation {
+  background-color: var(--colorGrey50);
+  border-right-color: var(--colorGrey200);
+}
+
+:global(:root.theme-dark) .directConversationButton:hover {
+  background-color: var(--colorGrey200);
+}
+
+:global(:root.theme-dark) .directConversationButtonSelected {
+  background-color: rgba(141, 104, 243, 0.15);
+}
+
+:global(:root.theme-dark) .directThreadBubble {
+  background-color: var(--colorGrey200);
+}
+
+:global(:root.theme-dark) .directThreadHeading {
+  border-bottom-color: var(--colorGrey200);
+}
+
+:global(:root.theme-dark) .directThreadComposer {
+  background-color: var(--colorGrey50);
+  border-top-color: var(--colorGrey200);
 }
